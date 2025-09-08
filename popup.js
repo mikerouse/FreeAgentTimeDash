@@ -4,17 +4,22 @@ class TimeTracker {
         this.timers = {};
         this.clients = {};
         this.activeTimers = new Set();
-        this.freeagentAPI = new FreeAgentAPI();
+        this.freeagentAPI = null; // Initialize later to avoid errors
         this.pendingTimeslip = null; // For task selection modal
-        this.init();
+        this.init().catch(error => {
+            console.error('TimeTracker initialization failed:', error);
+        });
     }
 
     async init() {
+        console.log('TimeTracker initializing...');
         await this.loadData();
+        console.log('Data loaded:', { clients: this.clients, freeagentConnected: this.freeagentConnected });
         this.setupEventListeners();
         this.updateDisplay();
         this.startUpdateLoop();
         await this.checkSetupStatus();
+        console.log('TimeTracker initialized');
     }
 
     async loadData() {
@@ -110,19 +115,39 @@ class TimeTracker {
     }
 
     async checkSetupStatus() {
+        console.log('Checking setup status...', {
+            freeagentConnected: this.freeagentConnected,
+            setupSkipped: localStorage.getItem('setupSkipped')
+        });
+        
         const setupContainer = document.getElementById('setup-container');
         const mainContainer = document.getElementById('main-container');
         
         if (!this.freeagentConnected && !localStorage.getItem('setupSkipped')) {
+            console.log('Showing setup container');
             setupContainer.classList.remove('hidden');
             mainContainer.style.display = 'none';
         } else {
+            console.log('Showing main container');
             setupContainer.classList.add('hidden');
             mainContainer.style.display = 'block';
         }
 
         // Update sync status
         this.updateSyncStatus();
+        
+        // Ensure modals are hidden on startup
+        const configModal = document.getElementById('config-modal');
+        const taskModal = document.getElementById('task-modal');
+        
+        if (configModal) {
+            configModal.classList.add('hidden');
+            console.log('Config modal hidden');
+        }
+        if (taskModal) {
+            taskModal.classList.add('hidden');
+            console.log('Task modal hidden');
+        }
     }
 
     async toggleTimer(timerId) {
@@ -408,6 +433,17 @@ class TimeTracker {
             return;
         }
 
+        // Initialize FreeAgent API if not already done
+        if (!this.freeagentAPI) {
+            try {
+                this.freeagentAPI = new FreeAgentAPI();
+            } catch (error) {
+                console.error('Failed to initialize FreeAgent API:', error);
+                this.showNotification('Failed to initialize FreeAgent API', 'error');
+                return;
+            }
+        }
+
         document.getElementById('config-modal').classList.remove('hidden');
         await this.loadProjectsForConfiguration();
     }
@@ -535,6 +571,17 @@ class TimeTracker {
     async showTaskSelectionModal(timerId) {
         const timer = this.timers[timerId];
         const client = this.clients[timerId];
+        
+        // Initialize FreeAgent API if not already done
+        if (!this.freeagentAPI) {
+            try {
+                this.freeagentAPI = new FreeAgentAPI();
+            } catch (error) {
+                console.error('Failed to initialize FreeAgent API:', error);
+                this.showNotification('Failed to initialize FreeAgent API', 'error');
+                return;
+            }
+        }
         
         // Stop the timer first
         this.stopTimer(timerId);
