@@ -144,3 +144,211 @@ You can create simple colored circles or use a timer icon. For now, the extensio
 ## Contributing
 
 This is a personal project but feel free to fork and modify for your own use. The code is structured to be easily extensible.
+
+# FreeAgent Time Tracker Desktop App
+
+A professional desktop time tracking application with FreeAgent integration, built with Electron.
+
+## 🎯 Features
+
+- **Desktop Native**: Standalone app with system tray integration
+- **Global Shortcuts**: Alt+1, Alt+2, Alt+3 for instant timer control
+- **FreeAgent Integration**: Direct timeslip creation and project sync
+- **Smart Time Rounding**: Professional 30-minute default with customizable options
+- **Always Available**: Minimize to tray, never lose your timers
+- **Cross Platform**: Windows, macOS, and Linux support
+- **Auto Updates**: Seamless background updates
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 16+ installed
+- FreeAgent developer account (for API access)
+
+### Installation
+
+1. **Clone and install dependencies:**
+```bash
+cd FreeAgentTimeDashCode
+npm install
+```
+
+2. **Configure FreeAgent API:**
+   - Update `src/renderer/js/freeagent-api.js` with your FreeAgent client ID
+   - Set up OAuth redirect handling
+
+3. **Run in development:**
+```bash
+npm run dev
+```
+
+4. **Build for production:**
+```bash
+npm run build
+```
+
+## 📦 Building Distributables
+
+### Windows
+```bash
+npm run build-win
+```
+Creates: `dist/FreeAgent Time Tracker Setup.exe`
+
+### macOS
+```bash
+npm run build-mac  
+```
+Creates: `dist/FreeAgent Time Tracker.dmg`
+
+### Linux
+```bash
+npm run build-linux
+```
+Creates: `dist/FreeAgent Time Tracker.AppImage`
+
+## 🎮 Usage
+
+### Quick Start
+1. Launch the app
+2. Use Alt+1, Alt+2, Alt+3 to start/stop timers
+3. Click the cog icon to configure timer projects
+4. Connect to FreeAgent for automatic timeslip creation
+
+### System Tray
+- **Click**: Show/hide main window
+- **Right-click**: Quick timer controls and settings
+- **Double-click**: Always show main window
+
+### Keyboard Shortcuts
+- `Alt+1/2/3`: Toggle timers 1, 2, 3
+- `Alt+T`: Show main window
+- `Alt+S`: Stop all running timers
+- `Escape`: Close open panels
+- `Ctrl/Cmd+S`: Save active form
+
+## 🔧 Configuration
+
+### Timer Setup
+1. Click the ⚙️ button next to any timer
+2. Set timer name and color
+3. Connect to FreeAgent and select client/project
+4. Save configuration
+
+### FreeAgent Connection
+1. Click "Setup FreeAgent" 
+2. Follow OAuth authentication flow
+3. Grant permissions to your FreeAgent account
+4. Timers will now sync timeslips automatically
+
+### Settings
+- **Time Rounding**: 15min, 30min, 1hour intervals
+- **Rounding Method**: Round to nearest vs always round up
+- **Notifications**: Control timer start/stop notifications
+- **Auto-save**: Automatically save drafts when timers stop
+
+## 📁 Project Structure
+
+```
+src/
+├── renderer/          # Frontend (HTML/CSS/JS)
+│   ├── index.html    # Main application window
+│   ├── styles/       # CSS stylesheets
+│   └── js/           # Application logic
+│       ├── app.js           # Main app initialization
+│       ├── time-tracker.js  # Timer management
+│       ├── freeagent-api.js # FreeAgent integration
+│       └── storage-adapter.js # Storage abstraction
+├── main/             # Electron main process (future)
+main.js               # Main Electron process
+preload.js           # Secure context bridge
+package.json         # Dependencies and build config
+```
+
+## 🔒 Security
+
+- **Context Isolation**: Renderer process is isolated from Node.js
+- **Secure Storage**: API tokens encrypted with electron-store
+- **CSP Headers**: Content Security Policy prevents code injection
+- **No Node Integration**: Renderer cannot access Node.js directly
+
+## 🛠 Development
+
+### Debug Mode
+```bash
+npm run dev
+```
+- Opens DevTools automatically
+- Hot reload enabled
+- Verbose logging
+
+### Production Build
+```bash
+npm run build
+```
+- Optimized bundles
+- Auto-updater enabled
+- Code signing (if configured)
+
+## 📋 Roadmap
+
+### Phase 1: Core Functionality ✅
+- [x] Timer management
+- [x] Desktop app structure
+- [x] System tray integration
+- [x] Global shortcuts
+- [x] FreeAgent API integration
+
+### Phase 2: Enhanced Features (In Progress)
+- [ ] OAuth callback server
+- [ ] Offline timeslip queue
+- [ ] Time reporting dashboard
+- [ ] Export functionality
+- [ ] Multi-language support
+
+### Phase 3: Advanced Features
+- [ ] Team collaboration
+- [ ] Invoice integration
+- [ ] Advanced reporting
+- [ ] Mobile companion app
+- [ ] Browser extension sync
+
+## 🐛 Troubleshooting
+
+### App Won't Start
+1. Check Node.js version (16+ required)
+2. Run `npm install` to update dependencies
+3. Clear cache: `npm run clean` (if available)
+
+### FreeAgent Connection Issues
+1. Verify API credentials in freeagent-api.js
+2. Check OAuth redirect URL matches FreeAgent app settings
+3. Ensure internet connection is stable
+
+### Performance Issues
+1. Close unnecessary panels
+2. Clear application cache via Settings
+3. Restart application
+4. Update to latest version
+
+## 📝 License
+
+MIT License - see LICENSE file for details.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## 📞 Support
+
+- GitHub Issues: Report bugs and feature requests
+- Documentation: Check README and inline comments
+- FreeAgent API: https://dev.freeagent.com
+
+---
+
+**Built with ❤️ using Electron and modern web technologies**

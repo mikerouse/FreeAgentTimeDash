@@ -1,0 +1,58 @@
+{
+  "name": "freeagent-time-tracker",
+  "version": "1.0.0",
+  "description": "Professional time tracking desktop app with FreeAgent integration",
+  "main": "main.js",
+  "author": "FreeAgent Time Tracker",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build-win": "electron-builder --win",
+    "build-mac": "electron-builder --mac", 
+    "build-linux": "electron-builder --linux",
+    "dist": "electron-builder --publish=never"
+  },
+  "dependencies": {
+    "electron": "^27.0.0",
+    "electron-store": "^8.1.0",
+    "electron-updater": "^6.1.0",
+    "express": "^4.18.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.6.0"
+  },
+  "build": {
+    "appId": "com.freeagent.timetracker",
+    "productName": "FreeAgent Time Tracker",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icons/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icons/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icons/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createStartMenuShortcut": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "FreeAgent Time Tracker"
+    }
+  }
+}
