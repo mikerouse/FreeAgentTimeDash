@@ -183,6 +183,213 @@
         .config-button.cancel:hover {
             background: #e0e0e0;
         }
+
+        /* Enhanced Timeslip UI Styles */
+        .timeslip-info {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .info-row label {
+            font-weight: bold;
+            color: #495057;
+            margin: 0;
+            min-width: 100px;
+        }
+        
+        .info-value {
+            font-weight: normal;
+            color: #212529;
+        }
+        
+        .time-display {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .time-display-rounded {
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        .date-input, .rounding-select {
+            padding: 6px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            min-width: 150px;
+        }
+        
+        .date-input:focus, .rounding-select:focus {
+            outline: none;
+            border-color: #80bdff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,.25);
+        }
+        
+        .rounding-hint, .comment-hint {
+            display: block;
+            font-size: 12px;
+            color: #6c757d;
+            font-style: italic;
+            margin-top: 5px;
+        }
+        
+        .config-row textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        /* Enhanced Button Styles */
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .setup-button.primary {
+            background: #28a745;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .setup-button.primary:hover {
+            background: #218838;
+        }
+        
+        .setup-button.secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .setup-button.secondary:hover {
+            background: #5a6268;
+        }
+        
+        .setup-button.cancel {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 1px solid #ced4da;
+        }
+        
+        .setup-button.cancel:hover {
+            background: #e9ecef;
+        }
+
+        /* Drafts Section Styles */
+        .drafts-section {
+            margin: 15px 0;
+            padding: 0 15px;
+        }
+        
+        .drafts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .drafts-header h4 {
+            margin: 0;
+            font-size: 14px;
+            color: #495057;
+        }
+        
+        .drafts-toggle {
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .drafts-toggle:hover {
+            background: #5a6268;
+        }
+        
+        .drafts-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .draft-item {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .draft-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .draft-title {
+            font-weight: bold;
+            color: #856404;
+        }
+        
+        .draft-time {
+            font-family: 'Courier New', monospace;
+            color: #6c757d;
+        }
+        
+        .draft-details {
+            color: #6c757d;
+            margin: 5px 0;
+        }
+        
+        .draft-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+        }
+        
+        .draft-btn {
+            padding: 3px 8px;
+            border: none;
+            border-radius: 3px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        
+        .draft-btn.submit {
+            background: #28a745;
+            color: white;
+        }
+        
+        .draft-btn.delete {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .draft-btn:hover {
+            opacity: 0.8;
+        }
         
         .client-name {
             font-weight: bold;
@@ -517,6 +724,15 @@
             </div>
         </div>
     </div>
+
+    <!-- Drafts Section -->
+    <div id="drafts-section" class="drafts-section hidden">
+        <div class="drafts-header">
+            <h4>📝 Saved Drafts</h4>
+            <button id="toggle-drafts" class="drafts-toggle">Show</button>
+        </div>
+        <div id="drafts-list" class="drafts-list"></div>
+    </div>
     
     <div class="footer">
         <div class="total-time">
@@ -528,19 +744,47 @@
         <button id="setup-btn" class="setup-button" style="font-size: 12px; padding: 5px 10px;">
             Setup FreeAgent
         </button>
+        <button id="settings-btn" class="setup-button" style="font-size: 12px; padding: 5px 10px; background: #6c757d;">
+            ⚙️ Settings
+        </button>
     </div>
 
     <!-- Task Selection Modal -->
     <div id="task-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Select Task & Create Timeslip</h3>
+                <h3>Create Timeslip</h3>
                 <button id="close-task" class="close-btn">&times;</button>
             </div>
             <div class="modal-body">
-                <div id="task-info">
-                    <p><strong>Project:</strong> <span id="task-project-name"></span></p>
-                    <p><strong>Time Logged:</strong> <span id="task-time-logged"></span></p>
+                <div id="task-info" class="timeslip-info">
+                    <div class="info-row">
+                        <label>Project:</label>
+                        <span id="task-project-name" class="info-value"></span>
+                    </div>
+                    <div class="info-row">
+                        <label>Actual Time:</label>
+                        <span id="task-time-actual" class="info-value time-display"></span>
+                    </div>
+                    <div class="info-row">
+                        <label>Rounded Time:</label>
+                        <span id="task-time-rounded" class="info-value time-display-rounded"></span>
+                    </div>
+                    <div class="info-row">
+                        <label>Work Date:</label>
+                        <input type="date" id="task-work-date" class="date-input">
+                    </div>
+                </div>
+                
+                <div class="config-row">
+                    <label>Time Rounding:</label>
+                    <select id="time-rounding" class="rounding-select">
+                        <option value="0">No rounding (exact time)</option>
+                        <option value="15">15 minutes</option>
+                        <option value="30" selected>30 minutes (default)</option>
+                        <option value="60">1 hour</option>
+                    </select>
+                    <small class="rounding-hint">Professional time tracking typically uses 30-minute intervals</small>
                 </div>
                 
                 <div class="config-row">
@@ -551,15 +795,17 @@
                 </div>
                 
                 <div class="config-row">
-                    <label>Comment (optional):</label>
-                    <textarea id="task-comment" placeholder="Describe what you worked on..."></textarea>
+                    <label>Comment:</label>
+                    <textarea id="task-comment" placeholder="Describe what you worked on..." rows="3"></textarea>
+                    <small class="comment-hint">Detailed comments help with invoicing and project tracking</small>
                 </div>
                 
                 <div id="task-error" class="error hidden"></div>
             </div>
             <div class="modal-footer">
-                <button id="create-timeslip" class="setup-button">Create Timeslip</button>
-                <button id="cancel-task" class="setup-button" style="background: #666;">Cancel</button>
+                <button id="create-timeslip" class="setup-button primary">Create Timeslip</button>
+                <button id="save-draft" class="setup-button secondary">Save Draft</button>
+                <button id="cancel-task" class="setup-button cancel">Cancel</button>
             </div>
         </div>
     </div>

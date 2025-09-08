@@ -286,31 +286,33 @@ class FreeAgentAPI {
 	 * Create a timeslip
 	 * Following FreeAgent API best practices from docs/timeslips.md
 	 */
-	async createTimeslip(projectUrl, taskUrl, hours, comment = '') {
+	async createTimeslip(projectUrl, taskUrl, hours, comment = '', workDate = null, roundingMinutes = 30) {
 		if (!this.currentUser) {
 			throw new Error('Current user not loaded. Call init() first.');
 		}
 
-		// Validation as per documentation
-		if (hours <= 0) {
-			throw new Error('Hours must be positive');
-		}
-		
-		if (!projectUrl || !taskUrl) {
-			throw new Error('Project and task URLs are required');
+		// Apply time rounding (default 30 minutes)
+		const roundedHours = this.roundTime(hours, roundingMinutes);
+
+		// Pre-validate data using validation method
+		const validation = this.validateTimeslipData(projectUrl, taskUrl, roundedHours, workDate);
+		if (!validation.isValid) {
+			throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
 		}
 
-		// Convert elapsed time to decimal hours with proper precision
-		// As per docs: hours = milliseconds / (1000 * 60 * 60)
-		const roundedHours = Math.round(hours * 100) / 100; // Round to 2 decimal places
+		// Convert to proper decimal precision for API
+		const finalHours = Math.round(roundedHours * 100) / 100; // Round to 2 decimal places
+		
+		// Use provided date or default to today - allows backdating
+		const targetDate = workDate || new Date().toISOString().split('T')[0];
 		
 		const timeslipData = {
 			timeslip: {
 				task: taskUrl,                                          // Required: URI of the task
 				user: this.currentUser.url,                            // Required: URI of the user
 				project: projectUrl,                                    // Required: URI of the project
-				dated_on: new Date().toISOString().split('T')[0],      // Required: Today's date in YYYY-MM-DD
-				hours: roundedHours,                                    // Required: Decimal hours
+				dated_on: targetDate,                                   // Required: Work date in YYYY-MM-DD
+				hours: finalHours,                                      // Required: Decimal hours (rounded)
 				comment: comment || `Auto-tracked time entry`          // Optional: Description of work
 			}
 		};
@@ -351,6 +353,117 @@ class FreeAgentAPI {
 			console.error('Error creating timeslip:', error);
 			throw error;
 		}
+	}
+
+	/**
+	 * Create multiple timeslips in batch
+	 * More efficient for multiple timer submissions
+	 * Following FreeAgent API best practices from docs/timeslips.md
+	 */
+	async createTimeslipsBatch(timeslipRequests) {
+		if (!this.currentUser) {
+			throw new Error('Current user not loaded. Call init() first.');
+		}
+
+		if (!Array.isArray(timeslipRequests) || timeslipRequests.length === 0) {
+			throw new Error('Timeslip requests array is required and must not be empty');
+		}
+
+		const results = [];
+		const errors = [];
+
+		// Process each timeslip sequentially to avoid API rate limits
+		for (let i = 0; i < timeslipRequests.length; i++) {
+			const request = timeslipRequests[i];
+			try {
+				const result = await this.createTimeslip(
+					request.projectUrl,
+					request.taskUrl,
+					request.hours,
+					request.comment,
+					request.workDate
+				);
+				results.push({ success: true, result, index: i });
+			} catch (error) {
+				console.error(`Batch timeslip ${i} failed:`, error);
+				errors.push({ success: false, error: error.message, index: i });
+			}
+
+			// Add small delay between requests to respect API limits
+			if (i < timeslipRequests.length - 1) {
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+		}
+
+		console.log(`Batch timeslip creation completed: ${results.length} successful, ${errors.length} failed`);
+		
+		return {
+			successful: results,
+			failed: errors,
+			totalCount: timeslipRequests.length,
+			successCount: results.length,
+			failureCount: errors.length
+		};
+	}
+
+	/**
+	 * Validate timeslip data before submission
+	 * Following FreeAgent API validation requirements from docs/timeslips.md
+	 */
+	validateTimeslipData(projectUrl, taskUrl, hours, workDate = null) {
+		const errors = [];
+
+		// Required field validation
+		if (!projectUrl) {
+			errors.push('Project URL is required');
+		}
+		if (!taskUrl) {
+			errors.push('Task URL is required');
+		}
+		if (hours === null || hours === undefined) {
+			errors.push('Hours is required');
+		}
+
+		// Data format validation
+		if (typeof hours !== 'number' || hours <= 0) {
+			errors.push('Hours must be a positive number');
+		}
+		if (hours > 24) {
+			errors.push('Hours cannot exceed 24 in a single day');
+		}
+
+		// Date validation
+		if (workDate) {
+			const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+			if (!dateRegex.test(workDate)) {
+				errors.push('Work date must be in YYYY-MM-DD format');
+			} else {
+				const date = new Date(workDate);
+				const today = new Date();
+				const maxPastDays = 365; // Allow up to 1 year backdating
+				
+				if (date > today) {
+					errors.push('Work date cannot be in the future');
+				}
+				if ((today - date) / (1000 * 60 * 60 * 24) > maxPastDays) {
+					errors.push('Work date cannot be more than 1 year in the past');
+				}
+			}
+		}
+
+		// URL format validation (basic check)
+		const urlRegex = /^https:\/\/api\.freeagent\.com\/v2\//;
+		if (projectUrl && !urlRegex.test(projectUrl)) {
+			errors.push('Project URL must be a valid FreeAgent API URL');
+		}
+		if (taskUrl && !urlRegex.test(taskUrl)) {
+			errors.push('Task URL must be a valid FreeAgent API URL');
+		}
+
+		return {
+			isValid: errors.length === 0,
+			errors: errors
+		};
 	}
 
 	/**
@@ -460,6 +573,123 @@ class FreeAgentAPI {
 	 */
 	async refreshTasksForProject(projectUrl) {
 		return await this.getTasksForProject(projectUrl, true);
+	}
+
+	/**
+	 * Get timeslips with filtering options
+	 * Following FreeAgent API best practices from docs/timeslips.md
+	 */
+	async getTimeslips(options = {}) {
+		try {
+			const params = new URLSearchParams();
+			
+			// Apply filters as per documentation
+			if (options.view) {
+				params.append('view', options.view); // 'all', 'unbilled'
+			}
+			if (options.user) {
+				params.append('user', options.user);
+			}
+			if (options.project) {
+				params.append('project', options.project);
+			}
+			if (options.task) {
+				params.append('task', options.task);
+			}
+			if (options.from_date) {
+				params.append('from_date', options.from_date);
+			}
+			if (options.to_date) {
+				params.append('to_date', options.to_date);
+			}
+			if (options.sort) {
+				params.append('sort', options.sort); // 'dated_on', 'created_at', 'updated_at'
+			}
+
+			const queryString = params.toString();
+			const endpoint = queryString ? `/timeslips?${queryString}` : '/timeslips';
+			
+			const response = await this.auth.apiRequest(endpoint);
+			if (!response.ok) {
+				throw new Error(`Failed to load timeslips: ${response.status}`);
+			}
+
+			const data = await response.json();
+			return data.timeslips || [];
+		} catch (error) {
+			console.error('Error loading timeslips:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get unbilled timeslips for the current user
+	 * Useful for generating invoices and tracking billable time
+	 */
+	async getUnbilledTimeslips() {
+		if (!this.currentUser) {
+			throw new Error('Current user not loaded. Call init() first.');
+		}
+
+		return await this.getTimeslips({
+			view: 'unbilled',
+			user: this.currentUser.url,
+			sort: 'dated_on'
+		});
+	}
+
+	/**
+	 * Get recent timeslips for the current user
+	 * Default to last 30 days of activity
+	 */
+	async getRecentTimeslips(days = 30) {
+		if (!this.currentUser) {
+			throw new Error('Current user not loaded. Call init() first.');
+		}
+
+		const fromDate = new Date();
+		fromDate.setDate(fromDate.getDate() - days);
+		const fromDateStr = fromDate.toISOString().split('T')[0];
+
+		return await this.getTimeslips({
+			user: this.currentUser.url,
+			from_date: fromDateStr,
+			sort: '-dated_on' // Most recent first
+		});
+	}
+
+	/**
+	 * Round time to specified intervals
+	 * Default to 30-minute rounding for professional time tracking
+	 */
+	roundTime(hours, roundingMinutes = 30) {
+		if (roundingMinutes <= 0) return hours;
+		
+		const roundingHours = roundingMinutes / 60;
+		return Math.round(hours / roundingHours) * roundingHours;
+	}
+
+	/**
+	 * Round time up to specified intervals (never round down)
+	 * Useful for billing - always round in client's favor
+	 */
+	roundTimeUp(hours, roundingMinutes = 30) {
+		if (roundingMinutes <= 0) return hours;
+		
+		const roundingHours = roundingMinutes / 60;
+		return Math.ceil(hours / roundingHours) * roundingHours;
+	}
+
+	/**
+	 * Format time rounding options for UI display
+	 */
+	getTimeRoundingOptions() {
+		return [
+			{ value: 0, label: 'No rounding (exact time)', description: 'Track precise time to the minute' },
+			{ value: 15, label: '15 minutes', description: 'Round to quarter hours (0.25h intervals)' },
+			{ value: 30, label: '30 minutes', description: 'Round to half hours (0.5h intervals)' },
+			{ value: 60, label: '1 hour', description: 'Round to full hours (1h intervals)' }
+		];
 	}
 }
 

@@ -54,6 +54,7 @@ class TimeTracker {
         await this.checkSetupStatus();
         this.isInitializing = false; // Initialization complete
         this.hideAllModalsAndSetup(); // Ensure correct state after init
+        await this.loadDraftsIndicator(); // Show drafts if any exist
         console.log('TimeTracker initialized');
     }
 
@@ -182,6 +183,16 @@ class TimeTracker {
         document.getElementById('close-task')?.addEventListener('click', () => this.closeTaskModal());
         document.getElementById('cancel-task')?.addEventListener('click', () => this.closeTaskModal());
         document.getElementById('create-timeslip')?.addEventListener('click', () => this.createTimeslip());
+        document.getElementById('save-draft')?.addEventListener('click', () => this.saveDraft());
+
+        // Time rounding change event
+        document.getElementById('time-rounding')?.addEventListener('change', () => this.updateTimeRounding());
+
+        // Work date change event
+        document.getElementById('task-work-date')?.addEventListener('change', () => this.onWorkDateChanged());
+
+        // Drafts section events
+        document.getElementById('toggle-drafts')?.addEventListener('click', () => this.toggleDrafts());
 
         // Project selection changes
         for (let i = 1; i <= 3; i++) {
@@ -811,12 +822,117 @@ class TimeTracker {
         this.updateDisplay();
         this.notifyBackgroundScript(timerId);
 
-        // Show modal
+        // Show modal with enhanced UI
         document.getElementById('task-project-name').textContent = `${client.name} - ${client.project.name}`;
-        document.getElementById('task-time-logged').textContent = this.formatTimeDecimal(this.pendingTimeslip.hours);
+        document.getElementById('task-time-actual').textContent = this.formatTimeDecimal(this.pendingTimeslip.hours);
+        
+        // Set today as default work date
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('task-work-date').value = today;
+        
+        // Initialize time rounding display
+        this.updateTimeRounding();
+        
         document.getElementById('task-modal').classList.remove('hidden');
         
         await this.loadTasksForSelection();
+    }
+
+    updateTimeRounding() {
+        if (!this.pendingTimeslip) return;
+        
+        const roundingSelect = document.getElementById('time-rounding');
+        const roundingMinutes = parseInt(roundingSelect.value);
+        
+        // Calculate rounded time using FreeAgent API method
+        const roundedHours = this.freeagentAPI.roundTime(this.pendingTimeslip.hours, roundingMinutes);
+        
+        // Update display
+        const roundedTimeElement = document.getElementById('task-time-rounded');
+        roundedTimeElement.textContent = this.formatTimeDecimal(roundedHours);
+        
+        // Store the rounded time for submission
+        this.pendingTimeslip.roundedHours = roundedHours;
+        this.pendingTimeslip.roundingMinutes = roundingMinutes;
+        
+        // Show time difference if significant
+        const timeDiff = Math.abs(roundedHours - this.pendingTimeslip.hours);
+        if (timeDiff > 0.01) { // Show if difference is more than ~36 seconds
+            const diffText = roundedHours > this.pendingTimeslip.hours ? '+' : '';
+            roundedTimeElement.title = `${diffText}${this.formatTimeDecimal(timeDiff)} difference from actual time`;
+            roundedTimeElement.style.fontWeight = 'bold';
+        } else {
+            roundedTimeElement.title = 'No rounding applied';
+            roundedTimeElement.style.fontWeight = 'normal';
+        }
+    }
+
+    onWorkDateChanged() {
+        // Validate the selected date
+        const dateInput = document.getElementById('task-work-date');
+        const selectedDate = new Date(dateInput.value);
+        const today = new Date();
+        
+        if (selectedDate > today) {
+            alert('Work date cannot be in the future.');
+            dateInput.value = today.toISOString().split('T')[0];
+        }
+    }
+
+    async saveDraft() {
+        const taskSelect = document.getElementById('task-select');
+        const commentInput = document.getElementById('task-comment');
+        const workDateInput = document.getElementById('task-work-date');
+        const roundingSelect = document.getElementById('time-rounding');
+        
+        if (!taskSelect.value) {
+            alert('Please select a task before saving draft');
+            return;
+        }
+
+        try {
+            // Save draft to Chrome storage
+            const draftData = {
+                projectUrl: this.pendingTimeslip.projectUrl,
+                projectName: this.pendingTimeslip.projectName,
+                clientName: this.pendingTimeslip.clientName,
+                taskUrl: taskSelect.value,
+                taskName: taskSelect.options[taskSelect.selectedIndex].text,
+                actualHours: this.pendingTimeslip.hours,
+                roundedHours: this.pendingTimeslip.roundedHours || this.pendingTimeslip.hours,
+                comment: commentInput.value,
+                workDate: workDateInput.value,
+                roundingMinutes: parseInt(roundingSelect.value),
+                savedAt: new Date().toISOString(),
+                timerId: this.pendingTimeslip.timerId
+            };
+
+            // Get existing drafts
+            const result = await chrome.storage.local.get(['timeslipDrafts']);
+            const drafts = result.timeslipDrafts || [];
+            
+            // Add new draft
+            drafts.push(draftData);
+            
+            // Keep only last 10 drafts
+            if (drafts.length > 10) {
+                drafts.splice(0, drafts.length - 10);
+            }
+            
+            await chrome.storage.local.set({ timeslipDrafts: drafts });
+            
+            // Reset the timer's elapsed time since it's saved as draft
+            this.timers[this.pendingTimeslip.timerId].elapsed = 0;
+            await this.saveData();
+            this.updateDisplay();
+            
+            this.closeTaskModal();
+            this.showNotification(`💾 Draft saved: ${this.formatTimeDecimal(draftData.roundedHours)} hours`);
+            
+        } catch (error) {
+            console.error('Error saving draft:', error);
+            alert('Failed to save draft: ' + error.message);
+        }
     }
 
     async loadTasksForSelection() {
@@ -875,6 +991,8 @@ class TimeTracker {
     async createTimeslip() {
         const taskSelect = document.getElementById('task-select');
         const commentInput = document.getElementById('task-comment');
+        const workDateInput = document.getElementById('task-work-date');
+        const roundingSelect = document.getElementById('time-rounding');
         const errorEl = document.getElementById('task-error');
         const createBtn = document.getElementById('create-timeslip');
         
@@ -897,14 +1015,20 @@ class TimeTracker {
                 taskUrl = newTask.url;
             }
 
-            // Create the timeslip
+            // Get form values
             const comment = commentInput.value || `Timer ${this.pendingTimeslip.timerId}: ${this.pendingTimeslip.clientName}`;
+            const workDate = workDateInput.value;
+            const roundingMinutes = parseInt(roundingSelect.value);
+            const hoursToSubmit = this.pendingTimeslip.roundedHours || this.pendingTimeslip.hours;
             
+            // Create the timeslip with time rounding and custom date
             await this.freeagentAPI.createTimeslip(
                 this.pendingTimeslip.projectUrl,
                 taskUrl,
-                this.pendingTimeslip.hours,
-                comment
+                hoursToSubmit,
+                comment,
+                workDate,
+                roundingMinutes
             );
 
             // Reset the timer's elapsed time since it's now logged
@@ -913,7 +1037,12 @@ class TimeTracker {
             this.updateDisplay();
 
             this.closeTaskModal();
-            this.showNotification(`✅ Timeslip created: ${this.formatTimeDecimal(this.pendingTimeslip.hours)} hours`);
+            
+            // Show success notification with details
+            const timeMsg = roundingMinutes > 0 ? 
+                `${this.formatTimeDecimal(hoursToSubmit)} hours (rounded from ${this.formatTimeDecimal(this.pendingTimeslip.hours)})` :
+                `${this.formatTimeDecimal(hoursToSubmit)} hours`;
+            this.showNotification(`✅ Timeslip created: ${timeMsg}`);
 
         } catch (error) {
             console.error('Error creating timeslip:', error);
@@ -930,9 +1059,154 @@ class TimeTracker {
         const m = Math.round((hours - h) * 60);
         return h > 0 ? `${h}h ${m}m` : `${m}m`;
     }
+
+    async toggleDrafts() {
+        const draftsSection = document.getElementById('drafts-section');
+        const toggleBtn = document.getElementById('toggle-drafts');
+        const draftsList = document.getElementById('drafts-list');
+
+        if (draftsSection.classList.contains('hidden')) {
+            // Show drafts
+            draftsSection.classList.remove('hidden');
+            toggleBtn.textContent = 'Hide';
+            await this.loadAndDisplayDrafts();
+        } else {
+            // Hide drafts
+            draftsSection.classList.add('hidden');
+            toggleBtn.textContent = 'Show';
+        }
+    }
+
+    async loadAndDisplayDrafts() {
+        try {
+            const result = await chrome.storage.local.get(['timeslipDrafts']);
+            const drafts = result.timeslipDrafts || [];
+            const draftsList = document.getElementById('drafts-list');
+
+            if (drafts.length === 0) {
+                draftsList.innerHTML = '<div class="draft-item">No saved drafts</div>';
+                return;
+            }
+
+            // Sort drafts by save date (most recent first)
+            drafts.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+
+            draftsList.innerHTML = drafts.map((draft, index) => {
+                const savedDate = new Date(draft.savedAt);
+                const formattedDate = savedDate.toLocaleDateString();
+                const formattedTime = savedDate.toLocaleTimeString();
+
+                return `
+                    <div class="draft-item" data-draft-index="${index}">
+                        <div class="draft-header">
+                            <div class="draft-title">${draft.clientName} - ${draft.projectName}</div>
+                            <div class="draft-time">${this.formatTimeDecimal(draft.roundedHours)}h</div>
+                        </div>
+                        <div class="draft-details">
+                            <div><strong>Task:</strong> ${draft.taskName}</div>
+                            <div><strong>Date:</strong> ${draft.workDate}</div>
+                            <div><strong>Comment:</strong> ${draft.comment || 'No comment'}</div>
+                            <div><strong>Saved:</strong> ${formattedDate} ${formattedTime}</div>
+                        </div>
+                        <div class="draft-actions">
+                            <button class="draft-btn submit" onclick="timeTracker.submitDraft(${index})">Submit</button>
+                            <button class="draft-btn delete" onclick="timeTracker.deleteDraft(${index})">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+        } catch (error) {
+            console.error('Error loading drafts:', error);
+            document.getElementById('drafts-list').innerHTML = '<div class="draft-item">Error loading drafts</div>';
+        }
+    }
+
+    async submitDraft(draftIndex) {
+        try {
+            const result = await chrome.storage.local.get(['timeslipDrafts']);
+            const drafts = result.timeslipDrafts || [];
+            
+            if (!drafts[draftIndex]) {
+                throw new Error('Draft not found');
+            }
+
+            const draft = drafts[draftIndex];
+
+            // Submit the draft as a timeslip
+            await this.freeagentAPI.createTimeslip(
+                draft.projectUrl,
+                draft.taskUrl,
+                draft.roundedHours,
+                draft.comment,
+                draft.workDate,
+                draft.roundingMinutes
+            );
+
+            // Remove the draft from storage
+            drafts.splice(draftIndex, 1);
+            await chrome.storage.local.set({ timeslipDrafts: drafts });
+
+            // Refresh the drafts display
+            await this.loadAndDisplayDrafts();
+
+            this.showNotification(`✅ Draft submitted: ${this.formatTimeDecimal(draft.roundedHours)} hours`);
+
+        } catch (error) {
+            console.error('Error submitting draft:', error);
+            this.showNotification(`❌ Failed to submit draft: ${error.message}`, 'error');
+        }
+    }
+
+    async deleteDraft(draftIndex) {
+        try {
+            const result = await chrome.storage.local.get(['timeslipDrafts']);
+            const drafts = result.timeslipDrafts || [];
+            
+            if (!drafts[draftIndex]) {
+                throw new Error('Draft not found');
+            }
+
+            // Remove the draft from storage
+            drafts.splice(draftIndex, 1);
+            await chrome.storage.local.set({ timeslipDrafts: drafts });
+
+            // Refresh the drafts display
+            await this.loadAndDisplayDrafts();
+
+            this.showNotification('🗑️ Draft deleted');
+
+        } catch (error) {
+            console.error('Error deleting draft:', error);
+            this.showNotification(`❌ Failed to delete draft: ${error.message}`, 'error');
+        }
+    }
+
+    async loadDraftsIndicator() {
+        try {
+            const result = await chrome.storage.local.get(['timeslipDrafts']);
+            const drafts = result.timeslipDrafts || [];
+            const draftsSection = document.getElementById('drafts-section');
+            const toggleBtn = document.getElementById('toggle-drafts');
+
+            if (drafts.length > 0) {
+                // Show drafts section and update button text
+                draftsSection.classList.remove('hidden');
+                toggleBtn.textContent = `Show (${drafts.length})`;
+            } else {
+                // Hide drafts section if no drafts
+                draftsSection.classList.add('hidden');
+            }
+        } catch (error) {
+            console.error('Error loading drafts indicator:', error);
+        }
+    }
 }
+
+// Global reference for draft button access
+let timeTracker;
 
 // Initialize when popup opens
 document.addEventListener('DOMContentLoaded', () => {
-    new TimeTracker();
+    timeTracker = new TimeTracker();
 });
