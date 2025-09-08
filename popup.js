@@ -597,7 +597,7 @@ class TimeTracker {
         try {
             if (loadingEl) {
                 loadingEl.classList.remove('hidden');
-                loadingEl.textContent = 'Loading projects...';
+                loadingEl.textContent = 'Loading active projects...';
             }
             if (errorEl) {
                 errorEl.classList.add('hidden');
@@ -616,17 +616,33 @@ class TimeTracker {
             // Clear existing options
             select.innerHTML = '<option value="">Select Project...</option>';
             
-            // Add projects grouped by client
-            for (const [clientName, clientProjects] of Object.entries(projects)) {
+            // Add projects grouped by client as per FreeAgent API best practices
+            const clientNames = Object.keys(projects).sort(); // Sort clients alphabetically
+            
+            clientNames.forEach(clientName => {
                 const optgroup = document.createElement('optgroup');
-                optgroup.label = clientName;
+                optgroup.label = `${clientName} (${projects[clientName].length} project${projects[clientName].length !== 1 ? 's' : ''})`;
                 
-                clientProjects.forEach(project => {
+                projects[clientName].forEach(project => {
                     const option = document.createElement('option');
                     option.value = project.url;
-                    option.textContent = project.name;
+                    
+                    // Enhanced display with project status and billing info
+                    let displayText = project.name;
+                    if (project.billing_rate && parseFloat(project.billing_rate) > 0) {
+                        displayText += ` (${project.currency}${project.billing_rate}/${project.billing_period || 'hour'})`;
+                    }
+                    if (project.budget && parseFloat(project.budget) > 0) {
+                        displayText += ` [Budget: ${project.currency}${project.budget}]`;
+                    }
+                    
+                    option.textContent = displayText;
                     option.dataset.clientName = project.contact_name;
                     option.dataset.projectName = project.name;
+                    option.dataset.currency = project.currency;
+                    option.dataset.billingRate = project.billing_rate;
+                    option.dataset.billingPeriod = project.billing_period;
+                    option.title = `Client: ${project.contact_name}\nProject: ${project.name}\nCurrency: ${project.currency}${project.billing_rate ? '\nRate: ' + project.currency + project.billing_rate + '/' + (project.billing_period || 'hour') : ''}`;
                     
                     // Check if this project is currently selected for this timer
                     if (this.clients[this.currentConfigTimer].project && 
@@ -638,11 +654,15 @@ class TimeTracker {
                 });
                 
                 select.appendChild(optgroup);
-            }
+            });
 
             if (loadingEl) {
                 loadingEl.classList.add('hidden');
             }
+            
+            // Show project count in success message
+            const totalProjects = Object.values(projects).reduce((sum, clientProjects) => sum + clientProjects.length, 0);
+            console.log(`Loaded ${totalProjects} active projects from ${clientNames.length} clients for timer configuration`);
             
         } catch (error) {
             console.error('Error loading projects:', error);
@@ -650,7 +670,7 @@ class TimeTracker {
                 loadingEl.classList.add('hidden');
             }
             if (errorEl) {
-                errorEl.textContent = 'Failed to load projects. Please try again.';
+                errorEl.textContent = `Failed to load projects: ${error.message}. Please check your FreeAgent connection.`;
                 errorEl.classList.remove('hidden');
             }
         }
@@ -765,31 +785,42 @@ class TimeTracker {
             taskSelect.innerHTML = '<option value="">Loading tasks...</option>';
             errorEl.classList.add('hidden');
 
-            const tasks = await this.freeagentAPI.getTasksForProject(this.pendingTimeslip.projectUrl);
+            // Use the enhanced method that creates default tasks if none exist
+            // Following best practices from docs/tasks.md
+            const tasks = await this.freeagentAPI.getTasksForProjectWithDefault(this.pendingTimeslip.projectUrl);
             
             taskSelect.innerHTML = '<option value="">Select Task...</option>';
             
-            if (tasks.length === 0) {
-                // No tasks found - offer to create default
+            tasks.forEach(task => {
                 const option = document.createElement('option');
-                option.value = 'CREATE_DEFAULT';
-                option.textContent = 'Create "General Work" task';
-                taskSelect.appendChild(option);
-            } else {
-                tasks.forEach(task => {
-                    const option = document.createElement('option');
-                    option.value = task.url;
-                    option.textContent = task.name;
-                    if (task.is_billable) {
-                        option.textContent += ` (Billable)`;
+                option.value = task.url;
+                
+                // Enhanced task display with billing information
+                let displayText = task.name;
+                if (task.is_billable) {
+                    if (task.billing_rate && parseFloat(task.billing_rate) > 0) {
+                        displayText += ` (${task.currency || 'GBP'}${task.billing_rate}/${task.billing_period || 'hour'})`;
+                    } else {
+                        displayText += ` (Billable)`;
                     }
-                    taskSelect.appendChild(option);
-                });
-            }
+                } else {
+                    displayText += ` (Non-billable)`;
+                }
+                
+                option.textContent = displayText;
+                option.dataset.taskName = task.name;
+                option.dataset.isBillable = task.is_billable;
+                option.dataset.billingRate = task.billing_rate || '';
+                option.title = `Task: ${task.name}\nBillable: ${task.is_billable ? 'Yes' : 'No'}${task.billing_rate ? '\nRate: ' + (task.currency || 'GBP') + task.billing_rate + '/' + (task.billing_period || 'hour') : ''}`;
+                
+                taskSelect.appendChild(option);
+            });
+
+            console.log(`Loaded ${tasks.length} tasks for project selection`);
 
         } catch (error) {
             console.error('Error loading tasks:', error);
-            errorEl.textContent = 'Failed to load tasks: ' + error.message;
+            errorEl.textContent = `Failed to load tasks: ${error.message}`;
             errorEl.classList.remove('hidden');
         }
     }

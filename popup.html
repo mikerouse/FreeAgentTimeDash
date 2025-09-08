@@ -361,11 +361,31 @@
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 14px;
+            font-family: inherit;
         }
 
         .project-select:focus, .task-select:focus {
             outline: none;
             border-color: #2196F3;
+        }
+
+        .project-select optgroup {
+            font-weight: bold;
+            color: #333;
+            background: #f8f8f8;
+        }
+
+        .project-select option, .task-select option {
+            padding: 4px 8px;
+            font-size: 13px;
+        }
+
+        .task-select option[data-is-billable="true"] {
+            color: #2e7d2e;
+        }
+
+        .task-select option[data-is-billable="false"] {
+            color: #666;
         }
 
         input[type="color"] {
