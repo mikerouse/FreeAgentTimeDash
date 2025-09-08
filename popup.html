@@ -145,6 +145,172 @@
             color: #999;
             margin-top: 5px;
         }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            width: 450px;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            padding: 20px 20px 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: #666;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-footer {
+            padding: 10px 20px 20px;
+            text-align: right;
+        }
+
+        .modal-footer button {
+            margin-left: 10px;
+        }
+
+        /* Configuration Styles */
+        .timer-config {
+            background: #f9f9f9;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 2px solid transparent;
+        }
+
+        .timer-config h4 {
+            margin: 0 0 15px;
+            color: #333;
+        }
+
+        .config-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .config-row label {
+            width: 80px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .project-select, .task-select {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .project-select:focus, .task-select:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+
+        input[type="color"] {
+            width: 50px;
+            height: 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .config-status {
+            font-size: 12px;
+            margin-top: 5px;
+            padding: 5px 8px;
+            border-radius: 4px;
+        }
+
+        .config-status.success {
+            background: #e8f5e8;
+            color: #2e7d2e;
+            border: 1px solid #a3d3a3;
+        }
+
+        .config-status.error {
+            background: #ffe8e8;
+            color: #d32f2f;
+            border: 1px solid #ffb3b3;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .error {
+            background: #ffe8e8;
+            color: #d32f2f;
+            border: 1px solid #ffb3b3;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        #task-info {
+            background: #f0f8ff;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        #task-comment {
+            width: 100%;
+            height: 60px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            font-family: inherit;
+        }
     </style>
 </head>
 <body>
@@ -198,9 +364,115 @@
         <button id="setup-btn" class="setup-button" style="font-size: 12px; padding: 5px 10px;">
             Setup
         </button>
+        <button id="config-btn" class="setup-button" style="font-size: 12px; padding: 5px 10px; background: #4CAF50;">
+            Configure Timers
+        </button>
+    </div>
+
+    <!-- Configuration Modal -->
+    <div id="config-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Configure Timer Projects</h3>
+                <button id="close-config" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="loading-projects" class="loading">Loading projects...</div>
+                <div id="config-error" class="error hidden"></div>
+                
+                <div id="timer-configs" class="hidden">
+                    <!-- Timer 1 Config -->
+                    <div class="timer-config" data-timer="1">
+                        <h4>Timer 1</h4>
+                        <div class="config-row">
+                            <label>Project:</label>
+                            <select id="project-select-1" class="project-select">
+                                <option value="">Select Project...</option>
+                            </select>
+                        </div>
+                        <div class="config-row">
+                            <label>Color:</label>
+                            <input type="color" id="color-select-1" value="#FF5722">
+                        </div>
+                        <div class="config-status" id="config-status-1"></div>
+                    </div>
+
+                    <!-- Timer 2 Config -->
+                    <div class="timer-config" data-timer="2">
+                        <h4>Timer 2</h4>
+                        <div class="config-row">
+                            <label>Project:</label>
+                            <select id="project-select-2" class="project-select">
+                                <option value="">Select Project...</option>
+                            </select>
+                        </div>
+                        <div class="config-row">
+                            <label>Color:</label>
+                            <input type="color" id="color-select-2" value="#2196F3">
+                        </div>
+                        <div class="config-status" id="config-status-2"></div>
+                    </div>
+
+                    <!-- Timer 3 Config -->
+                    <div class="timer-config" data-timer="3">
+                        <h4>Timer 3</h4>
+                        <div class="config-row">
+                            <label>Project:</label>
+                            <select id="project-select-3" class="project-select">
+                                <option value="">Select Project...</option>
+                            </select>
+                        </div>
+                        <div class="config-row">
+                            <label>Color:</label>
+                            <input type="color" id="color-select-3" value="#4CAF50">
+                        </div>
+                        <div class="config-status" id="config-status-3"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-config" class="setup-button">Save Configuration</button>
+                <button id="cancel-config" class="setup-button" style="background: #666;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Selection Modal -->
+    <div id="task-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Select Task & Create Timeslip</h3>
+                <button id="close-task" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="task-info">
+                    <p><strong>Project:</strong> <span id="task-project-name"></span></p>
+                    <p><strong>Time Logged:</strong> <span id="task-time-logged"></span></p>
+                </div>
+                
+                <div class="config-row">
+                    <label>Task:</label>
+                    <select id="task-select" class="task-select">
+                        <option value="">Loading tasks...</option>
+                    </select>
+                </div>
+                
+                <div class="config-row">
+                    <label>Comment (optional):</label>
+                    <textarea id="task-comment" placeholder="Describe what you worked on..."></textarea>
+                </div>
+                
+                <div id="task-error" class="error hidden"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="create-timeslip" class="setup-button">Create Timeslip</button>
+                <button id="cancel-task" class="setup-button" style="background: #666;">Cancel</button>
+            </div>
+        </div>
     </div>
     
     <script src="auth.js"></script>
+    <script src="freeagent-api.js"></script>
     <script src="popup.js"></script>
 </body>
 </html>

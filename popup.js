@@ -4,6 +4,8 @@ class TimeTracker {
         this.timers = {};
         this.clients = {};
         this.activeTimers = new Set();
+        this.freeagentAPI = new FreeAgentAPI();
+        this.pendingTimeslip = null; // For task selection modal
         this.init();
     }
 
@@ -28,9 +30,24 @@ class TimeTracker {
             };
             
             this.clients = result.clients || {
-                1: { name: 'Client 1', color: '#FF5722' },
-                2: { name: 'Client 2', color: '#2196F3' },
-                3: { name: 'Client 3', color: '#4CAF50' }
+                1: { 
+                    name: 'Client 1', 
+                    color: '#FF5722',
+                    project: null,
+                    configured: false
+                },
+                2: { 
+                    name: 'Client 2', 
+                    color: '#2196F3',
+                    project: null,
+                    configured: false
+                },
+                3: { 
+                    name: 'Client 3', 
+                    color: '#4CAF50',
+                    project: null,
+                    configured: false
+                }
             };
             
             this.activeTimers = new Set(result.activeTimers || []);
@@ -65,6 +82,24 @@ class TimeTracker {
         document.getElementById('connect-btn')?.addEventListener('click', () => this.connectFreeAgent());
         document.getElementById('skip-setup')?.addEventListener('click', () => this.skipSetup());
         document.getElementById('setup-btn')?.addEventListener('click', () => this.showSetup());
+        document.getElementById('config-btn')?.addEventListener('click', () => this.showConfigModal());
+
+        // Configuration modal events
+        document.getElementById('close-config')?.addEventListener('click', () => this.closeConfigModal());
+        document.getElementById('cancel-config')?.addEventListener('click', () => this.closeConfigModal());
+        document.getElementById('save-config')?.addEventListener('click', () => this.saveConfiguration());
+
+        // Task modal events
+        document.getElementById('close-task')?.addEventListener('click', () => this.closeTaskModal());
+        document.getElementById('cancel-task')?.addEventListener('click', () => this.closeTaskModal());
+        document.getElementById('create-timeslip')?.addEventListener('click', () => this.createTimeslip());
+
+        // Project selection changes
+        for (let i = 1; i <= 3; i++) {
+            document.getElementById(`project-select-${i}`)?.addEventListener('change', (e) => {
+                this.onProjectSelected(i, e.target.value);
+            });
+        }
 
         // Listen for background script messages
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -92,18 +127,28 @@ class TimeTracker {
 
     async toggleTimer(timerId) {
         const timer = this.timers[timerId];
+        const client = this.clients[timerId];
         
         if (this.activeTimers.has(timerId)) {
-            // Stop timer
-            this.stopTimer(timerId);
+            // Stop timer - check if configured for FreeAgent
+            if (client.configured && client.project) {
+                await this.showTaskSelectionModal(timerId);
+            } else {
+                this.stopTimer(timerId);
+                await this.saveData();
+                this.updateDisplay();
+                this.notifyBackgroundScript(timerId);
+            }
         } else {
             // Start timer
             this.startTimer(timerId);
+            await this.saveData();
+            this.updateDisplay();
+            this.notifyBackgroundScript(timerId);
         }
-        
-        await this.saveData();
-        this.updateDisplay();
-        
+    }
+    
+    notifyBackgroundScript(timerId) {
         // Notify background script with error handling
         try {
             chrome.runtime.sendMessage({
@@ -153,8 +198,16 @@ class TimeTracker {
             const btn = document.getElementById(`timer-${i}-btn`);
             const nameEl = document.getElementById(`client-${i}-name`);
             
-            // Update client name
-            nameEl.textContent = this.clients[i].name;
+            // Update client name - show project info if configured
+            const client = this.clients[i];
+            if (client.configured && client.project) {
+                nameEl.innerHTML = `<strong>${client.name}</strong><br><small>${client.project.name}</small>`;
+            } else {
+                nameEl.textContent = client.name;
+            }
+            
+            // Update tile border color
+            tile.style.borderLeftColor = client.color;
             
             // Calculate current time
             let currentTime = timer.elapsed;
@@ -346,6 +399,268 @@ class TimeTracker {
             statusEl.textContent = 'Not connected to FreeAgent';
             statusEl.className = 'sync-status';
         }
+    }
+
+    // Configuration Modal Methods
+    async showConfigModal() {
+        if (!this.freeagentConnected) {
+            this.showNotification('Please connect to FreeAgent first', 'error');
+            return;
+        }
+
+        document.getElementById('config-modal').classList.remove('hidden');
+        await this.loadProjectsForConfiguration();
+    }
+
+    closeConfigModal() {
+        document.getElementById('config-modal').classList.add('hidden');
+    }
+
+    async loadProjectsForConfiguration() {
+        const loadingEl = document.getElementById('loading-projects');
+        const errorEl = document.getElementById('config-error');
+        const configsEl = document.getElementById('timer-configs');
+
+        try {
+            loadingEl.classList.remove('hidden');
+            errorEl.classList.add('hidden');
+            configsEl.classList.add('hidden');
+
+            // Initialize API if needed
+            if (!this.freeagentAPI.isReady()) {
+                await this.freeagentAPI.init();
+            }
+
+            const projects = await this.freeagentAPI.getProjects();
+            
+            // Populate project dropdowns
+            for (let timerId = 1; timerId <= 3; timerId++) {
+                const select = document.getElementById(`project-select-${timerId}`);
+                const colorInput = document.getElementById(`color-select-${timerId}`);
+                
+                // Clear existing options
+                select.innerHTML = '<option value="">Select Project...</option>';
+                
+                // Add projects grouped by client
+                for (const [clientName, clientProjects] of Object.entries(projects)) {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = clientName;
+                    
+                    clientProjects.forEach(project => {
+                        const option = document.createElement('option');
+                        option.value = project.url;
+                        option.textContent = project.name;
+                        option.dataset.clientName = project.contact_name;
+                        option.dataset.projectName = project.name;
+                        optgroup.appendChild(option);
+                    });
+                    
+                    select.appendChild(optgroup);
+                }
+
+                // Set current values
+                const client = this.clients[timerId];
+                if (client.project) {
+                    select.value = client.project.url;
+                }
+                colorInput.value = client.color;
+            }
+
+            loadingEl.classList.add('hidden');
+            configsEl.classList.remove('hidden');
+
+        } catch (error) {
+            console.error('Error loading projects:', error);
+            loadingEl.classList.add('hidden');
+            errorEl.textContent = 'Failed to load projects: ' + error.message;
+            errorEl.classList.remove('hidden');
+        }
+    }
+
+    onProjectSelected(timerId, projectUrl) {
+        const select = document.getElementById(`project-select-${timerId}`);
+        const statusEl = document.getElementById(`config-status-${timerId}`);
+        
+        if (projectUrl) {
+            const selectedOption = select.selectedOptions[0];
+            const clientName = selectedOption.dataset.clientName;
+            const projectName = selectedOption.dataset.projectName;
+            
+            statusEl.textContent = `✓ Selected: ${clientName} - ${projectName}`;
+            statusEl.className = 'config-status success';
+        } else {
+            statusEl.textContent = '';
+            statusEl.className = 'config-status';
+        }
+    }
+
+    async saveConfiguration() {
+        try {
+            // Update client configurations
+            for (let timerId = 1; timerId <= 3; timerId++) {
+                const projectSelect = document.getElementById(`project-select-${timerId}`);
+                const colorInput = document.getElementById(`color-select-${timerId}`);
+                const client = this.clients[timerId];
+                
+                if (projectSelect.value) {
+                    const selectedOption = projectSelect.selectedOptions[0];
+                    client.project = {
+                        url: projectSelect.value,
+                        name: selectedOption.dataset.projectName,
+                        contact_name: selectedOption.dataset.clientName
+                    };
+                    client.name = selectedOption.dataset.clientName;
+                    client.configured = true;
+                } else {
+                    client.project = null;
+                    client.name = `Client ${timerId}`;
+                    client.configured = false;
+                }
+                
+                client.color = colorInput.value;
+            }
+
+            await this.saveData();
+            this.updateDisplay();
+            this.closeConfigModal();
+            this.showNotification('Configuration saved successfully!');
+
+        } catch (error) {
+            console.error('Error saving configuration:', error);
+            this.showNotification('Failed to save configuration: ' + error.message, 'error');
+        }
+    }
+
+    // Task Selection Modal Methods
+    async showTaskSelectionModal(timerId) {
+        const timer = this.timers[timerId];
+        const client = this.clients[timerId];
+        
+        // Stop the timer first
+        this.stopTimer(timerId);
+        
+        // Store pending timeslip data
+        this.pendingTimeslip = {
+            timerId: timerId,
+            projectUrl: client.project.url,
+            projectName: client.project.name,
+            clientName: client.name,
+            hours: timer.elapsed / (1000 * 60 * 60),
+            elapsedMs: timer.elapsed
+        };
+
+        // Update UI
+        await this.saveData();
+        this.updateDisplay();
+        this.notifyBackgroundScript(timerId);
+
+        // Show modal
+        document.getElementById('task-project-name').textContent = `${client.name} - ${client.project.name}`;
+        document.getElementById('task-time-logged').textContent = this.formatTimeDecimal(this.pendingTimeslip.hours);
+        document.getElementById('task-modal').classList.remove('hidden');
+        
+        await this.loadTasksForSelection();
+    }
+
+    async loadTasksForSelection() {
+        const taskSelect = document.getElementById('task-select');
+        const errorEl = document.getElementById('task-error');
+        
+        try {
+            taskSelect.innerHTML = '<option value="">Loading tasks...</option>';
+            errorEl.classList.add('hidden');
+
+            const tasks = await this.freeagentAPI.getTasksForProject(this.pendingTimeslip.projectUrl);
+            
+            taskSelect.innerHTML = '<option value="">Select Task...</option>';
+            
+            if (tasks.length === 0) {
+                // No tasks found - offer to create default
+                const option = document.createElement('option');
+                option.value = 'CREATE_DEFAULT';
+                option.textContent = 'Create "General Work" task';
+                taskSelect.appendChild(option);
+            } else {
+                tasks.forEach(task => {
+                    const option = document.createElement('option');
+                    option.value = task.url;
+                    option.textContent = task.name;
+                    if (task.is_billable) {
+                        option.textContent += ` (Billable)`;
+                    }
+                    taskSelect.appendChild(option);
+                });
+            }
+
+        } catch (error) {
+            console.error('Error loading tasks:', error);
+            errorEl.textContent = 'Failed to load tasks: ' + error.message;
+            errorEl.classList.remove('hidden');
+        }
+    }
+
+    closeTaskModal() {
+        document.getElementById('task-modal').classList.add('hidden');
+        this.pendingTimeslip = null;
+    }
+
+    async createTimeslip() {
+        const taskSelect = document.getElementById('task-select');
+        const commentInput = document.getElementById('task-comment');
+        const errorEl = document.getElementById('task-error');
+        const createBtn = document.getElementById('create-timeslip');
+        
+        if (!taskSelect.value) {
+            errorEl.textContent = 'Please select a task';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            createBtn.textContent = 'Creating...';
+            createBtn.disabled = true;
+            errorEl.classList.add('hidden');
+
+            let taskUrl = taskSelect.value;
+            
+            // Handle default task creation
+            if (taskUrl === 'CREATE_DEFAULT') {
+                const newTask = await this.freeagentAPI.createDefaultTask(this.pendingTimeslip.projectUrl);
+                taskUrl = newTask.url;
+            }
+
+            // Create the timeslip
+            const comment = commentInput.value || `Timer ${this.pendingTimeslip.timerId}: ${this.pendingTimeslip.clientName}`;
+            
+            await this.freeagentAPI.createTimeslip(
+                this.pendingTimeslip.projectUrl,
+                taskUrl,
+                this.pendingTimeslip.hours,
+                comment
+            );
+
+            // Reset the timer's elapsed time since it's now logged
+            this.timers[this.pendingTimeslip.timerId].elapsed = 0;
+            await this.saveData();
+            this.updateDisplay();
+
+            this.closeTaskModal();
+            this.showNotification(`✅ Timeslip created: ${this.formatTimeDecimal(this.pendingTimeslip.hours)} hours`);
+
+        } catch (error) {
+            console.error('Error creating timeslip:', error);
+            errorEl.textContent = 'Failed to create timeslip: ' + error.message;
+            errorEl.classList.remove('hidden');
+        } finally {
+            createBtn.textContent = 'Create Timeslip';
+            createBtn.disabled = false;
+        }
+    }
+
+    formatTimeDecimal(hours) {
+        const h = Math.floor(hours);
+        const m = Math.round((hours - h) * 60);
+        return h > 0 ? `${h}h ${m}m` : `${m}m`;
     }
 }
 

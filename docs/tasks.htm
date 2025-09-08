@@ -1,0 +1,501 @@
+<!doctype html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 7 ]><html class="no-js ie6" lang="en"><![endif]-->
+<!--[if IE 7 ]><html class="no-js ie7" lang="en"><![endif]-->
+<!--[if IE 8 ]><html class="no-js ie8" lang="en"><![endif]-->
+<!--[if (gte IE 9)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-5FNJVRX');</script>
+    <!-- End Google Tag Manager -->
+
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>FreeAgent Developer Dashboard</title>
+  <meta name="description" content="FreeAgent API resources, documentation and discussions">
+  <meta name="author" content="FreeAgent">
+  <meta name="handheldfriendly" content="true">
+  <meta name="mobileoptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="git-rev" content="4e956ddbc6b55c0af8f5b42c50a19792a247fb20"/>
+  <meta name="host" content="ip-10-132-214-9" />
+
+  <link rel="canonical" href="/">
+
+  <link rel="stylesheet" href="https://assets.freeagent.com/dev-dashboard/assets/normalize-e4aae0afc025a0d893b97769737681b2deb5bca7e806c3b855ab9e821ab31a8c.css" media="screen, handheld, print" />
+<link rel="stylesheet" href="https://assets.freeagent.com/dev-dashboard/assets/forms-be6e8f7943f7dd1d7c9c33ba1521c0736a662ad65c41403a7b1e85bec8f2648e.css" media="screen, handheld, print" />
+<link rel="stylesheet" href="https://assets.freeagent.com/dev-dashboard/assets/global-98316323bad1c7911d755dbfe434a04370251d8eb6bfbd3ec26eafda86061ea4.css" media="screen, handheld, print" />
+<link rel="stylesheet" href="https://assets.freeagent.com/dev-dashboard/assets/syntax-043b81b4b3d5b74b2ced59cf1b99eb9ec8316083135fdf84d6ec60c8e387681a.css" media="screen, handheld, print" />
+  <link rel="stylesheet" href="https://assets.freeagent.com/dev-dashboard/assets/screen-12c1473a4b507d97f1253019ca22309c6182ce34c8e4a288d9ac2602aef0de80.css" media="screen and (min-width: 320px)" />
+  <link rel="stylesheet" href="https://assets.freeagent.com/dev-dashboard/assets/prettify-5ed84a999751fab7ccb482fbb2009817950584e92170312dca06d9c87746ad3d.css" />
+
+  <!--[if (lt IE 9)]>
+    <script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" type="image/png">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+
+  <script src="https://assets.freeagent.com/dev-dashboard/assets/application-b5925ffa3a051941651361ace3c0ebf829b1ed3c93a0b6f7a850f74cf5759feb.js"></script>
+  <meta name="csrf-param" content="authenticity_token" />
+<meta name="csrf-token" content="SnKvlSSV0c9hDhzSwpqmjROqBeOzTQAzqPAbuFzOGKdmgiMyDsz66l8JECD_a4bic8nVPzd2hIUFHIBggUD2Ug" />
+</head>
+
+<body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5FNJVRX"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+
+
+  <div id="container">
+    <header role="banner">
+      <div class="contents">
+        <h1>
+          <a rel="home" href="/" title="Back to the homepage">
+            <img id="logo" alt="FreeAgent Developer Dashboard" src="https://assets.freeagent.com/dev-dashboard/assets/core/logo-bb7b21cedc4ed6ec3acf7ef7f52b809dbd97da9ee6e29168c5bb1123d727180c.png" />
+          </a>
+        </h1>
+        <ol role="navigation">
+          <li><a title="View your list of registered applications" href="/apps">My Apps</a></li>
+          <li><a title="Read the FreeAgent API documentation" href="/docs">API Docs</a></li>
+          <li><a rel="external" href="https://api-discuss.freeagent.com" title="Talk to other developers about the FreeAgent API">Discussion</a></li>
+            <li id="edit_account">
+  <a href="/edit">Edit account</a>
+  </li>
+
+          <li id="login">
+  <a class="button logout" href="/logout">Log out</a>
+  <a class="button login" href="/login">Log in</a>
+</li>
+
+        </ol>
+      </div>
+    </header>
+
+        <div role="main" class="meta">
+  <div id="content">
+    <div class="contents">
+      <div id="primary_content" class="docs">
+        <section id="primary">
+          
+          <h1>Tasks</h1>
+<p><em>Minimum access level</em>: <code>Time</code>, unless stated otherwise.</p>
+<h2 id="attributes">Attributes</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Required</th>
+      <th>Attribute</th>
+      <th>Description</th>
+      <th>Kind</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td></td>
+      <td>url</td>
+      <td>The unique identifier for the task</td>
+      <td>URI</td>
+    </tr>
+    <tr>
+      <td>&#10004;</td>
+      <td>name</td>
+      <td>Task name</td>
+      <td>String</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>currency</td>
+      <td><a href="/docs/currencies">Currency</a> code of the project (e.g. <code>USD</code>, <code>GBP</code>, <code>EUR</code>, &#8230;)</td>
+      <td>String</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>is_billable</td>
+      <td><code>true</code> if charging your clients for the task, <code>false</code> otherwise</td>
+      <td>Boolean</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>status</td>
+      <td>
+        One of the following:
+        <p>
+          <ul>
+            <li><code>Active</code></li>
+            <li><code>Completed</code></li>
+            <li><code>Hidden</code></li>
+          </ul>
+        </p>
+      </td>
+      <td>String</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>created_at</td>
+      <td>Creation of the task resource (UTC)</td>
+      <td>Timestamp</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>updated_at</td>
+      <td>When the task resource was last updated (UTC)</td>
+      <td>Timestamp</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>is_deletable</td>
+      <td><code>true</code> if this task can be deleted, <code>false</code> otherwise</td>
+      <td>Boolean</td>
+    </tr>
+  </tbody>
+
+  <thead>
+    <tr>
+      <th colspan="4">Additional attributes available to users with Contacts & Projects permission</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td></td>
+      <td>billing_rate</td>
+      <td>The rate at which the <a href="/docs/projects">project</a> is billed, per <code>billing_period</code></td>
+      <td>Decimal</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>billing_period</td>
+      <td>
+        One of the following:
+        <p>
+          <ul>
+            <li><code>day</code></li>
+            <li><code>hour</code></li>
+          </ul>
+        </p>
+      </td>
+      <td>String</td>
+    </tr>
+  </tbody>
+</table>
+<h2 id="list-all-tasks">List all tasks</h2><pre class=prettyprint><code class=>GET https://api.freeagent.com/v2/tasks
+</code></pre><h3>Input</h3><h4>View Filters</h4><pre class=prettyprint><code class=>GET https://api.freeagent.com/v2/tasks?view=active
+</code></pre>
+<ul>
+<li><code>all</code>: Show all tasks (default)</li>
+<li><code>active</code>: Show only tasks with status active.</li>
+<li><code>completed</code>: Show only tasks with status completed.</li>
+<li><code>hidden</code>: Show only tasks with status hidden.</li>
+</ul>
+<h4>Date Filters</h4><pre class=prettyprint><code class=>GET https://api.freeagent.com/v2/tasks?updated_since=2017-04-06
+</code></pre>
+<ul>
+<li><code>updated_since</code></li>
+</ul>
+<h4>Sort Orders</h4><pre class=prettyprint><code class=>GET https://api.freeagent.com/v2/tasks?sort=updated_at
+</code></pre>
+<ul>
+<li><code>name</code>: Sort by the task name (default).</li>
+<li><code>project</code>: Sort by the project_id associated with the task.</li>
+<li><code>billing_rate</code>: Sort by the billing rate.</li>
+<li><code>created_at</code>: Sort by the time the task was created.</li>
+<li><code>updated_at</code>: Sort by the time the task was last modified.</li>
+</ul>
+<h3>Response</h3><pre class=prettyprint><code class=>Status: 200 OK
+</code></pre><div class="highlight-json"><pre class=prettyprint><code class=json>{ &quot;tasks&quot;:[
+  {
+    &quot;url&quot;:&quot;https://api.freeagent.com/v2/tasks/1&quot;,
+    &quot;project&quot;:&quot;https://api.freeagent.com/v2/projects/1&quot;,
+    &quot;name&quot;:&quot;Sample Task&quot;,
+    &quot;currency&quot;:&quot;GBP&quot;,
+    &quot;is_billable&quot;:true,
+    &quot;billing_rate&quot;:&quot;0.0&quot;,
+    &quot;billing_period&quot;:&quot;hour&quot;,
+    &quot;status&quot;:&quot;Active&quot;,
+    &quot;created_at&quot;:&quot;2011-08-16T11:06:57Z&quot;,
+    &quot;updated_at&quot;:&quot;2011-08-16T11:06:57Z&quot;,
+    &quot;is_deletable&quot;: false
+  }
+]}
+</code></pre><a class='switch-to-xml-response' href="#">Show as XML</a></div><div class="highlight-xml"><pre class=prettyprint><code class=xml>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;freeagent&gt;
+  &lt;tasks type=&quot;array&quot;&gt;
+    &lt;task&gt;
+      &lt;url&gt;https://api.freeagent.com/v2/tasks/1&lt;/url&gt;
+      &lt;project&gt;https://api.freeagent.com/v2/projects/1&lt;/project&gt;
+      &lt;name&gt;Sample Task&lt;/name&gt;
+      &lt;currency&gt;GBP&lt;/currency&gt;
+      &lt;is-billable type=&quot;boolean&quot;&gt;true&lt;/is-billable&gt;
+      &lt;billing-rate type=&quot;decimal&quot;&gt;0.0&lt;/billing-rate&gt;
+      &lt;billing-period&gt;hour&lt;/billing-period&gt;
+      &lt;status&gt;Active&lt;/status&gt;
+      &lt;created-at type=&quot;datetime&quot;&gt;2011-08-16T11:06:57Z&lt;/created-at&gt;
+      &lt;updated-at type=&quot;datetime&quot;&gt;2011-08-16T11:06:57Z&lt;/updated-at&gt;
+      &lt;is-deletable type=&quot;boolean&quot;&gt;false&lt;/is-deletable&gt;
+    &lt;/task&gt;
+  &lt;/tasks&gt;
+&lt;/freeagent&gt;
+</code></pre><a class='switch-to-json-response' href="#">Show as JSON</a></div><h2 id="list-all-tasks-under-a-certain-project">List all tasks under a certain project</h2><pre class=prettyprint><code class=>GET https://api.freeagent.com/v2/tasks?project=https://api.freeagent.com/v2/projects/2
+</code></pre><h2 id="get-a-single-task">Get a single task</h2><pre class=prettyprint><code class=>GET https://api.freeagent.com/v2/tasks/:id
+</code></pre><h3>Response</h3><pre class=prettyprint><code class=>Status: 200 OK
+</code></pre><div class="highlight-json"><pre class=prettyprint><code class=json>{ &quot;task&quot;:
+  {
+    &quot;project&quot;:&quot;https://api.freeagent.com/v2/projects/1&quot;,
+    &quot;name&quot;:&quot;Sample Task&quot;,
+    &quot;currency&quot;:&quot;GBP&quot;,
+    &quot;is_billable&quot;:true,
+    &quot;billing_rate&quot;:&quot;0.0&quot;,
+    &quot;billing_period&quot;:&quot;hour&quot;,
+    &quot;status&quot;:&quot;Active&quot;,
+    &quot;created_at&quot;:&quot;2011-08-16T11:06:57Z&quot;,
+    &quot;updated_at&quot;:&quot;2011-08-16T11:06:57Z&quot;,
+    &quot;is_deletable&quot;: false
+  }
+}
+</code></pre><a class='switch-to-xml-response' href="#">Show as XML</a></div><div class="highlight-xml"><pre class=prettyprint><code class=xml>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;freeagent&gt;
+  &lt;task&gt;
+    &lt;project&gt;https://api.freeagent.com/v2/projects/1&lt;/project&gt;
+    &lt;name&gt;Sample Task&lt;/name&gt;
+    &lt;currency&gt;GBP&lt;/currency&gt;
+    &lt;is-billable type=&quot;boolean&quot;&gt;true&lt;/is-billable&gt;
+    &lt;billing-rate type=&quot;decimal&quot;&gt;0.0&lt;/billing-rate&gt;
+    &lt;billing-period&gt;hour&lt;/billing-period&gt;
+    &lt;status&gt;Active&lt;/status&gt;
+    &lt;created-at type=&quot;datetime&quot;&gt;2011-08-16T11:06:57Z&lt;/created-at&gt;
+    &lt;updated-at type=&quot;datetime&quot;&gt;2011-08-16T11:06:57Z&lt;/updated-at&gt;
+    &lt;is-deletable type=&quot;boolean&quot;&gt;false&lt;/is-deletable&gt;
+  &lt;/task&gt;
+&lt;/freeagent&gt;
+</code></pre><a class='switch-to-json-response' href="#">Show as JSON</a></div><h2 id="create-a-task-under-a-certain-project">Create a task under a certain project</h2><pre class=prettyprint><code class=>POST https://api.freeagent.com/v2/tasks?project=:project
+</code></pre>
+<p>Payload should have a root <code>task</code> element, containing elements listed
+under <a href="#attributes">Attributes</a>.</p>
+<h3>Response</h3><pre class=prettyprint><code class=>Status: 201 Created
+Location: https://api.freeagent.com/v2/tasks/2
+</code></pre><div class="highlight-json"><pre class=prettyprint><code class=json>{ &quot;task&quot;:
+  {
+    &quot;project&quot;:&quot;https://api.freeagent.com/v2/projects/1&quot;,
+    &quot;name&quot;:&quot;Sample Task&quot;,
+    &quot;currency&quot;:&quot;GBP&quot;,
+    &quot;is_billable&quot;:true,
+    &quot;billing_rate&quot;:&quot;0.0&quot;,
+    &quot;billing_period&quot;:&quot;hour&quot;,
+    &quot;status&quot;:&quot;Active&quot;,
+    &quot;created_at&quot;:&quot;2011-08-16T11:06:57Z&quot;,
+    &quot;updated_at&quot;:&quot;2011-08-16T11:06:57Z&quot;,
+    &quot;is_deletable&quot;: true
+  }
+}
+</code></pre><a class='switch-to-xml-response' href="#">Show as XML</a></div><div class="highlight-xml"><pre class=prettyprint><code class=xml>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;freeagent&gt;
+  &lt;task&gt;
+    &lt;project&gt;https://api.freeagent.com/v2/projects/1&lt;/project&gt;
+    &lt;name&gt;Sample Task&lt;/name&gt;
+    &lt;currency&gt;GBP&lt;/currency&gt;
+    &lt;is-billable type=&quot;boolean&quot;&gt;true&lt;/is-billable&gt;
+    &lt;billing-rate type=&quot;decimal&quot;&gt;0.0&lt;/billing-rate&gt;
+    &lt;billing-period&gt;hour&lt;/billing-period&gt;
+    &lt;status&gt;Active&lt;/status&gt;
+    &lt;created-at type=&quot;datetime&quot;&gt;2011-08-16T11:06:57Z&lt;/created-at&gt;
+    &lt;updated-at type=&quot;datetime&quot;&gt;2011-08-16T11:06:57Z&lt;/updated-at&gt;
+    &lt;is-deletable type=&quot;boolean&quot;&gt;true&lt;/is-deletable&gt;
+  &lt;/task&gt;
+&lt;/freeagent&gt;
+</code></pre><a class='switch-to-json-response' href="#">Show as JSON</a></div><h2 id="update-a-task">Update a task</h2><pre class=prettyprint><code class=>PUT https://api.freeagent.com/v2/tasks/:id
+</code></pre>
+<p>Payload should have a root <code>task</code> element, containing elements listed
+under <a href="#attributes">Attributes</a> that should be updated.</p>
+<h3>Response</h3><pre class=prettyprint><code class=>Status: 200 OK
+</code></pre><h2 id="delete-a-task">Delete a task</h2><pre class=prettyprint><code class=>DELETE https://api.freeagent.com/v2/users/:id
+</code></pre><h3>Response</h3><pre class=prettyprint><code class=>Status: 200 OK
+</code></pre>
+        </section>
+      </div>
+      <div id="side_navigation"></div>
+        <aside id="meta">
+    <div id="subnavigation" role="navigation">
+  <select id="navigation">
+    <option value="null">—Choose an area—</option>
+        <option value="/docs/index">Index</option>
+        <option value="/docs/quick_start">Quick Start</option>
+        <option value="/docs/introduction">Introduction</option>
+        <option value="/docs/how-to_guides">How To Guides</option>
+        <option value="/docs/using_curl">Using Curl</option>
+        <option value="/docs/versioning">Versioning</option>
+        <option value="/docs/rotating_client_secrets">Rotating Client Secrets</option>
+        <option value="/docs/changes">Changes</option>
+        <option value="/docs/accountancy_practice_api">Accountancy Practice API</option>
+        <option value="/docs/attachments">Attachments</option>
+        <option value="/docs/balance_sheet">Balance Sheet</option>
+        <option value="/docs/bank_accounts">Bank Accounts</option>
+        <option value="/docs/bank_feeds">Bank Feeds</option>
+        <option value="/docs/bank_transaction_explanations">Bank Transaction Explanations</option>
+        <option value="/docs/bank_transactions">Bank Transactions</option>
+        <option value="/docs/bills">Bills</option>
+        <option value="/docs/capital_asset_types">Capital Asset Types</option>
+        <option value="/docs/capital_assets">Capital Assets</option>
+        <option value="/docs/cashflow">Cashflow</option>
+        <option value="/docs/categories">Categories</option>
+        <option value="/docs/cis_bands">CIS Bands</option>
+        <option value="/docs/company">Company</option>
+        <option value="/docs/contacts">Contacts</option>
+        <option value="/docs/corporation_tax_returns">Corporation Tax Returns</option>
+        <option value="/docs/credit_note_reconciliations">Credit Note Reconciliations</option>
+        <option value="/docs/credit_notes">Credit Notes</option>
+        <option value="/docs/email_addresses">Email Addresses</option>
+        <option value="/docs/estimates">Estimates</option>
+        <option value="/docs/expenses">Expenses</option>
+        <option value="/docs/final_accounts_reports">Final Accounts Reports</option>
+        <option value="/docs/hire_purchases">Hire Purchases</option>
+        <option value="/docs/invoices">Invoices</option>
+        <option value="/docs/journal_sets">Journal Sets</option>
+        <option value="/docs/notes">Notes</option>
+        <option value="/docs/oauth">OAuth</option>
+        <option value="/docs/payroll">Payroll</option>
+        <option value="/docs/payroll_profiles">Payroll Profiles</option>
+        <option value="/docs/price_list_items">Price List Items</option>
+        <option value="/docs/profit_and_loss">Profit &amp; Loss</option>
+        <option value="/docs/projects">Projects</option>
+        <option value="/docs/properties">Properties</option>
+        <option value="/docs/recurring_invoices">Recurring Invoices</option>
+        <option value="/docs/sales_tax_periods">Sales Tax Periods</option>
+        <option value="/docs/self_assessment_returns">Self Assessment Returns</option>
+        <option value="/docs/stock_items">Stock Items</option>
+        <option value="/docs/tasks" selected="selected">Tasks</option>
+        <option value="/docs/timeslips">Timeslips</option>
+        <option value="/docs/transactions">Transactions</option>
+        <option value="/docs/trial_balance">Trial Balance</option>
+        <option value="/docs/users">Users</option>
+        <option value="/docs/vat_returns">Vat Returns</option>
+        <option value="/docs/sales_tax">Sales Tax</option>
+        <option value="/docs/currencies">Currencies</option>
+        <option value="/docs/depreciation_profiles">Depreciation Profiles</option>
+        <option value="/docs/api_terms">API Terms</option>
+  </select>
+<div>
+
+    <ol class="subnav">
+      <li><a href="/docs/index">Index</a></li>
+      <li><a href="/docs/quick_start">Quick Start</a></li>
+      <li><a href="/docs/introduction">Introduction</a></li>
+      <li><a href="/docs/how-to_guides">How To Guides</a></li>
+      <li><a href="/docs/using_curl">Using Curl</a></li>
+      <li><a href="/docs/versioning">Versioning</a></li>
+      <li><a href="/docs/rotating_client_secrets">Rotating Client Secrets</a></li>
+      <li><a href="/docs/changes">Changes</a></li>
+      <li><a href="/docs/accountancy_practice_api">Accountancy Practice API</a></li>
+      <li><a href="/docs/attachments">Attachments</a></li>
+      <li><a href="/docs/balance_sheet">Balance Sheet</a></li>
+      <li><a href="/docs/bank_accounts">Bank Accounts</a></li>
+      <li><a href="/docs/bank_feeds">Bank Feeds</a></li>
+      <li><a href="/docs/bank_transaction_explanations">Bank Transaction Explanations</a></li>
+      <li><a href="/docs/bank_transactions">Bank Transactions</a></li>
+      <li><a href="/docs/bills">Bills</a></li>
+      <li><a href="/docs/capital_asset_types">Capital Asset Types</a></li>
+      <li><a href="/docs/capital_assets">Capital Assets</a></li>
+      <li><a href="/docs/cashflow">Cashflow</a></li>
+      <li><a href="/docs/categories">Categories</a></li>
+      <li><a href="/docs/cis_bands">CIS Bands</a></li>
+      <li><a href="/docs/company">Company</a></li>
+      <li><a href="/docs/contacts">Contacts</a></li>
+      <li><a href="/docs/corporation_tax_returns">Corporation Tax Returns</a></li>
+      <li><a href="/docs/credit_note_reconciliations">Credit Note Reconciliations</a></li>
+      <li><a href="/docs/credit_notes">Credit Notes</a></li>
+      <li><a href="/docs/email_addresses">Email Addresses</a></li>
+      <li><a href="/docs/estimates">Estimates</a></li>
+      <li><a href="/docs/expenses">Expenses</a></li>
+      <li><a href="/docs/final_accounts_reports">Final Accounts Reports</a></li>
+      <li><a href="/docs/hire_purchases">Hire Purchases</a></li>
+      <li><a href="/docs/invoices">Invoices</a></li>
+      <li><a href="/docs/journal_sets">Journal Sets</a></li>
+      <li><a href="/docs/notes">Notes</a></li>
+      <li><a href="/docs/oauth">OAuth</a></li>
+      <li><a href="/docs/payroll">Payroll</a></li>
+      <li><a href="/docs/payroll_profiles">Payroll Profiles</a></li>
+      <li><a href="/docs/price_list_items">Price List Items</a></li>
+      <li><a href="/docs/profit_and_loss">Profit &amp; Loss</a></li>
+      <li><a href="/docs/projects">Projects</a></li>
+      <li><a href="/docs/properties">Properties</a></li>
+      <li><a href="/docs/recurring_invoices">Recurring Invoices</a></li>
+      <li><a href="/docs/sales_tax_periods">Sales Tax Periods</a></li>
+      <li><a href="/docs/self_assessment_returns">Self Assessment Returns</a></li>
+      <li><a href="/docs/stock_items">Stock Items</a></li>
+      <li class="active">
+        <a href="/docs/tasks">Tasks</a>
+        <ol data-scrollspy="scrollspy">
+            <li class=active>
+              <a href="#attributes">Attributes</a>
+            </li>
+            <li>
+              <a href="#list-all-tasks">List all tasks</a>
+            </li>
+            <li>
+              <a href="#list-all-tasks-under-a-certain-project">List all tasks under a certain project</a>
+            </li>
+            <li>
+              <a href="#get-a-single-task">Get a single task</a>
+            </li>
+            <li>
+              <a href="#create-a-task-under-a-certain-project">Create a task under a certain project</a>
+            </li>
+            <li>
+              <a href="#update-a-task">Update a task</a>
+            </li>
+            <li>
+              <a href="#delete-a-task">Delete a task</a>
+            </li>
+        </ol>
+      </li>
+      <li><a href="/docs/timeslips">Timeslips</a></li>
+      <li><a href="/docs/transactions">Transactions</a></li>
+      <li><a href="/docs/trial_balance">Trial Balance</a></li>
+      <li><a href="/docs/users">Users</a></li>
+      <li><a href="/docs/vat_returns">Vat Returns</a></li>
+      <li><a href="/docs/sales_tax">Sales Tax</a></li>
+      <li><a href="/docs/currencies">Currencies</a></li>
+      <li><a href="/docs/depreciation_profiles">Depreciation Profiles</a></li>
+      <li><a href="/docs/api_terms">API Terms</a></li>
+</ol>
+</div>
+</div>
+
+  </aside>
+
+    </div>
+  </div>
+  </div>
+
+
+    <footer role="contentinfo">
+      <ol role="navigation">
+        <li>FreeAgent &copy; 2007-2025</li>
+        <li><a href="http://www.freeagent.com/" rel="external" title="Visit the FreeAgent website">FreeAgent.com</a></li>
+        <li><a href="http://engineering.freeagent.com/" rel="external" title="Visit the FreeAgent engineering blog">Grinding Gears: FreeAgent Engineering Blog</a></li>
+        <li><a href="http://twitter.com/freeagent/" rel="external" title="Follow FreeAgent on Twitter">Follow us on Twitter</a></li>
+        <li><a title="View the FreeAgent API terms of use" href="/docs/api_terms">API Terms</a></li>
+      </ol>
+    </footer>
+
+  </div>
+
+  <script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-599742-7'], ['_setDomainName', 'dev.freeagent.com'], ['_trackPageview'], ['_trackPageLoadTime']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</body>
+</html>
