@@ -19,15 +19,16 @@ class TimeTracker {
     hideAllModalsAndSetup() {
         const setupContainer = document.getElementById('setup-container');
         const mainContainer = document.getElementById('main-container');
-        const configModal = document.getElementById('config-modal');
+        const configPanel = document.getElementById('config-panel');
         const taskModal = document.getElementById('task-modal');
+        
         if (setupContainer) {
             setupContainer.classList.add('hidden');
             setupContainer.style.display = 'none';
         }
-        if (configModal) {
-            configModal.classList.add('hidden');
-            configModal.style.display = 'none';
+        if (configPanel) {
+            configPanel.classList.remove('show');
+            configPanel.classList.add('hidden');
         }
         if (taskModal) {
             taskModal.classList.add('hidden');
@@ -167,10 +168,10 @@ class TimeTracker {
             }
         }
 
-        // Configuration modal events
-        document.getElementById('close-config')?.addEventListener('click', () => this.closeConfigModal());
-        document.getElementById('cancel-config')?.addEventListener('click', () => this.closeConfigModal());
+        // Configuration panel events
+        document.getElementById('close-config-panel')?.addEventListener('click', () => this.closeConfigPanel());
         document.getElementById('save-config')?.addEventListener('click', () => this.saveConfiguration());
+        document.getElementById('cancel-config')?.addEventListener('click', () => this.closeConfigPanel());
 
         // Task modal events
         document.getElementById('close-task')?.addEventListener('click', () => this.closeTaskModal());
@@ -532,39 +533,43 @@ class TimeTracker {
         }
     }
 
-    // Configuration Modal Methods
+    // Configuration Panel Methods
     async showConfigModal(timerId = 1) {
-        // Prevent showing config modal during initialization
+        // Prevent showing config panel during initialization
         if (this.isInitializing) {
-            console.log('Preventing config modal during initialization');
+            console.log('Preventing config panel during initialization');
             return;
         }
         
-        console.log(`Showing configuration modal for timer ${timerId}`);
+        console.log(`Showing configuration panel for timer ${timerId}`);
         this.currentConfigTimer = timerId;
         
-        // Update modal title and timer name
-        document.getElementById('config-modal-title').textContent = `Configure Timer ${timerId}`;
-        document.getElementById('config-timer-name').textContent = `Timer ${timerId} - ${this.clients[timerId].name}`;
-        
-        // Set current values
+        // Update panel title and set current values
+        document.getElementById('config-panel-title').textContent = `Configure Timer ${timerId}`;
+        document.getElementById('timer-name-input').value = this.clients[timerId].name;
         document.getElementById('color-select-current').value = this.clients[timerId].color;
         
-        document.getElementById('config-modal').classList.remove('hidden');
+        // Show the panel
+        const configPanel = document.getElementById('config-panel');
+        configPanel.classList.remove('hidden');
+        configPanel.classList.add('show');
         
         if (!this.freeagentConnected) {
-            // Show warning in the modal but still allow configuration
-            const errorEl = document.getElementById('config-error');
+            // Show warning but still allow configuration
+            const errorEl = document.getElementById('config-error-panel');
             if (errorEl) {
                 errorEl.textContent = 'Not connected to FreeAgent. Connect first to sync with projects.';
                 errorEl.classList.remove('hidden');
             }
-            // Show the config form anyway for color selection
-            document.getElementById('timer-config-single').classList.remove('hidden');
-            document.getElementById('loading-projects').classList.add('hidden');
+            // Hide project selection if not connected
+            document.getElementById('project-row').style.display = 'none';
             return;
         }
 
+        // Show project selection and load projects
+        document.getElementById('project-row').style.display = 'flex';
+        document.getElementById('config-error-panel').classList.add('hidden');
+        
         // Initialize FreeAgent API if not already done
         if (!this.freeagentAPI) {
             try {
@@ -576,23 +581,27 @@ class TimeTracker {
             }
         }
 
-        document.getElementById('config-modal').classList.remove('hidden');
         await this.loadProjectsForConfiguration();
     }
 
-    closeConfigModal() {
-        document.getElementById('config-modal').classList.add('hidden');
+    closeConfigPanel() {
+        const configPanel = document.getElementById('config-panel');
+        configPanel.classList.remove('show');
+        configPanel.classList.add('hidden');
     }
 
     async loadProjectsForConfiguration() {
-        const loadingEl = document.getElementById('loading-projects');
-        const errorEl = document.getElementById('config-error');
-        const configEl = document.getElementById('timer-config-single');
+        const loadingEl = document.getElementById('loading-projects-panel');
+        const errorEl = document.getElementById('config-error-panel');
 
         try {
-            loadingEl.classList.remove('hidden');
-            errorEl.classList.add('hidden');
-            configEl.classList.add('hidden');
+            if (loadingEl) {
+                loadingEl.classList.remove('hidden');
+                loadingEl.textContent = 'Loading projects...';
+            }
+            if (errorEl) {
+                errorEl.classList.add('hidden');
+            }
 
             // Initialize API if needed
             if (!this.freeagentAPI.isReady()) {
@@ -631,14 +640,19 @@ class TimeTracker {
                 select.appendChild(optgroup);
             }
 
-            loadingEl.classList.add('hidden');
-            configEl.classList.remove('hidden');
+            if (loadingEl) {
+                loadingEl.classList.add('hidden');
+            }
             
         } catch (error) {
             console.error('Error loading projects:', error);
-            loadingEl.classList.add('hidden');
-            errorEl.textContent = 'Failed to load projects. Please try again.';
-            errorEl.classList.remove('hidden');
+            if (loadingEl) {
+                loadingEl.classList.add('hidden');
+            }
+            if (errorEl) {
+                errorEl.textContent = 'Failed to load projects. Please try again.';
+                errorEl.classList.remove('hidden');
+            }
         }
     }
 
@@ -662,10 +676,12 @@ class TimeTracker {
     async saveConfiguration() {
         try {
             const timerId = this.currentConfigTimer;
+            const timerNameInput = document.getElementById('timer-name-input');
             const projectSelect = document.getElementById('project-select-current');
             const colorInput = document.getElementById('color-select-current');
             
             // Update client configuration
+            this.clients[timerId].name = timerNameInput.value.trim() || `Client ${timerId}`;
             this.clients[timerId].color = colorInput.value;
             
             if (projectSelect.value) {
@@ -676,7 +692,6 @@ class TimeTracker {
                     contact_name: selectedOption.dataset.clientName
                 };
                 this.clients[timerId].configured = true;
-                this.clients[timerId].name = selectedOption.dataset.clientName || `Client ${timerId}`;
             } else {
                 this.clients[timerId].project = null;
                 this.clients[timerId].configured = false;
@@ -689,9 +704,10 @@ class TimeTracker {
             this.updateDisplay();
             this.updateSyncStatus();
             
-            // Close modal
-            this.closeConfigModal();
+            // Close panel
+            this.closeConfigPanel();
             
+            this.showNotification(`Timer ${timerId} configuration saved!`, 'success');
             console.log(`Configuration saved for timer ${timerId}`);
         } catch (error) {
             console.error('Error saving configuration:', error);

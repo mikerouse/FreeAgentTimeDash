@@ -85,6 +85,104 @@
             background: #e0e0e0;
             border-color: #bbb;
         }
+
+        /* Configuration Slide Panel */
+        .config-panel {
+            background: white;
+            border-bottom: 1px solid #ddd;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            max-height: 0;
+            overflow: hidden;
+            margin: 0 -15px;
+        }
+        
+        .config-panel.show {
+            max-height: 400px;
+            padding: 0 15px 15px;
+        }
+        
+        .config-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0 10px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 15px;
+        }
+        
+        .config-panel-header h3 {
+            margin: 0;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .close-panel-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .close-panel-btn:hover {
+            color: #666;
+        }
+        
+        .timer-name-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .timer-name-input:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+        
+        .config-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 15px;
+        }
+        
+        .config-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        
+        .config-button.save {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .config-button.save:hover {
+            background: #45a049;
+        }
+        
+        .config-button.cancel {
+            background: #f5f5f5;
+            color: #666;
+            border: 1px solid #ddd;
+        }
+        
+        .config-button.cancel:hover {
+            background: #e0e0e0;
+        }
         
         .client-name {
             font-weight: bold;
@@ -245,19 +343,6 @@
         }
 
         /* Configuration Styles */
-        .timer-config {
-            background: #f9f9f9;
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 2px solid transparent;
-        }
-
-        .timer-config h4 {
-            margin: 0 0 15px;
-            color: #333;
-        }
-
         .config-row {
             display: flex;
             align-items: center;
@@ -289,25 +374,6 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
-        }
-
-        .config-status {
-            font-size: 12px;
-            margin-top: 5px;
-            padding: 5px 8px;
-            border-radius: 4px;
-        }
-
-        .config-status.success {
-            background: #e8f5e8;
-            color: #2e7d2e;
-            border: 1px solid #a3d3a3;
-        }
-
-        .config-status.error {
-            background: #ffe8e8;
-            color: #d32f2f;
-            border: 1px solid #ffb3b3;
         }
 
         .loading {
@@ -346,6 +412,39 @@
 <body>
     <div class="header">
         <div>Time Tracker</div>
+    </div>
+
+    <!-- Configuration Slide Panel -->
+    <div id="config-panel" class="config-panel">
+        <div class="config-panel-header">
+            <h3 id="config-panel-title">Configure Timer 1</h3>
+            <button id="close-config-panel" class="close-panel-btn">&times;</button>
+        </div>
+        <div class="config-panel-body">
+            <div id="loading-projects-panel" class="loading hidden">Loading projects...</div>
+            <div id="config-error-panel" class="error hidden"></div>
+            
+            <div id="timer-config-form">
+                <div class="config-row">
+                    <label>Timer Name:</label>
+                    <input type="text" id="timer-name-input" class="timer-name-input" placeholder="Enter timer name">
+                </div>
+                <div class="config-row">
+                    <label>Color:</label>
+                    <input type="color" id="color-select-current" value="#FF5722">
+                </div>
+                <div class="config-row" id="project-row">
+                    <label>Project:</label>
+                    <select id="project-select-current" class="project-select">
+                        <option value="">Select Project...</option>
+                    </select>
+                </div>
+                <div class="config-actions">
+                    <button id="save-config" class="config-button save">Save</button>
+                    <button id="cancel-config" class="config-button cancel">Cancel</button>
+                </div>
+            </div>
+        </div>
     </div>
     
     <div id="setup-container" class="setup-container hidden">
@@ -403,50 +502,6 @@
         <button id="setup-btn" class="setup-button" style="font-size: 12px; padding: 5px 10px;">
             Setup FreeAgent
         </button>
-    </div>
-
-    <!-- Configuration Modal -->
-    <div id="config-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="config-modal-title">Configure Timer</h3>
-                <button id="close-config" class="close-btn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div id="loading-projects" class="loading">Loading projects...</div>
-                <div id="config-error" class="error hidden"></div>
-                
-                <div id="timer-config-single" class="hidden">
-                    <div class="timer-config">
-                        <h4 id="config-timer-name">Timer 1</h4>
-                        <div class="config-row">
-                            <label>Project:</label>
-                            <select id="project-select-current" class="project-select">
-                                <option value="">Select Project...</option>
-                            </select>
-                        </div>
-                        <div class="config-row">
-                            <label>Color:</label>
-                            <input type="color" id="color-select-current" value="#FF5722">
-                        </div>
-                        <div class="config-status" id="config-status-current"></div>
-                    </div>
-                </div>
-                    </div>
-            </div>
-            <div class="modal-footer">
-                <button id="save-config" class="setup-button">Save Configuration</button>
-                <button id="cancel-config" class="setup-button" style="background: #666;">Cancel</button>
-            </div>
-        </div>
-    }
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="save-config" class="setup-button">Save Configuration</button>
-                <button id="cancel-config" class="setup-button" style="background: #666;">Cancel</button>
-            </div>
-        </div>
     </div>
 
     <!-- Task Selection Modal -->
