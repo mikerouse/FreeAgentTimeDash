@@ -123,15 +123,11 @@ class TimeTracker {
         const setupContainer = document.getElementById('setup-container');
         const mainContainer = document.getElementById('main-container');
         
-        if (!this.freeagentConnected && !localStorage.getItem('setupSkipped')) {
-            console.log('Showing setup container');
-            setupContainer.classList.remove('hidden');
-            mainContainer.style.display = 'none';
-        } else {
-            console.log('Showing main container');
-            setupContainer.classList.add('hidden');
-            mainContainer.style.display = 'block';
-        }
+        // Always show the main timer interface by default
+        // Setup is now optional and accessible via the Setup button
+        console.log('Showing main container (timers always visible)');
+        setupContainer.classList.add('hidden');
+        mainContainer.style.display = 'block';
 
         // Update sync status
         this.updateSyncStatus();
@@ -404,14 +400,20 @@ class TimeTracker {
     }
 
     skipSetup() {
+        console.log('Skipping setup, returning to timers');
         localStorage.setItem('setupSkipped', 'true');
         document.getElementById('setup-container').classList.add('hidden');
         document.getElementById('main-container').style.display = 'block';
     }
 
     showSetup() {
+        console.log('Showing setup modal');
         document.getElementById('setup-container').classList.remove('hidden');
         document.getElementById('main-container').style.display = 'none';
+        
+        // Hide other modals
+        document.getElementById('config-modal').classList.add('hidden');
+        document.getElementById('task-modal').classList.add('hidden');
     }
 
     updateSyncStatus() {
@@ -429,7 +431,8 @@ class TimeTracker {
     // Configuration Modal Methods
     async showConfigModal() {
         if (!this.freeagentConnected) {
-            this.showNotification('Please connect to FreeAgent first', 'error');
+            // Show setup modal instead of error
+            this.showSetup();
             return;
         }
 
