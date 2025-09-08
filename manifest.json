@@ -10,7 +10,8 @@
     "idle",
     "notifications",
     "activeTab",
-    "identity"
+    "identity",
+    "sidePanel"
   ],
   
   "host_permissions": [
@@ -19,6 +20,10 @@
   
   "background": {
     "service_worker": "background.js"
+  },
+  
+  "side_panel": {
+    "default_path": "popup.html"
   },
   
   "action": {

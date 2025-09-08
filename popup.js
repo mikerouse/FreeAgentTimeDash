@@ -6,19 +6,53 @@ class TimeTracker {
         this.activeTimers = new Set();
         this.freeagentAPI = null; // Initialize later to avoid errors
         this.pendingTimeslip = null; // For task selection modal
+        this.isInitializing = true; // Prevent modals during init
+        // Hide all modals and setup container immediately
+        document.addEventListener('DOMContentLoaded', () => {
+            this.hideAllModalsAndSetup();
+        });
         this.init().catch(error => {
             console.error('TimeTracker initialization failed:', error);
         });
     }
 
+    hideAllModalsAndSetup() {
+        const setupContainer = document.getElementById('setup-container');
+        const mainContainer = document.getElementById('main-container');
+        const configModal = document.getElementById('config-modal');
+        const taskModal = document.getElementById('task-modal');
+        if (setupContainer) {
+            setupContainer.classList.add('hidden');
+            setupContainer.style.display = 'none';
+        }
+        if (configModal) {
+            configModal.classList.add('hidden');
+            configModal.style.display = 'none';
+        }
+        if (taskModal) {
+            taskModal.classList.add('hidden');
+            taskModal.style.display = 'none';
+        }
+        if (mainContainer) {
+            mainContainer.classList.remove('hidden');
+            mainContainer.style.display = 'block';
+            mainContainer.style.visibility = 'visible';
+        }
+        console.log('All modals and setup container hidden, main container shown');
+    }
+
     async init() {
         console.log('TimeTracker initializing...');
+        this.hideAllModalsAndSetup();
         await this.loadData();
         console.log('Data loaded:', { clients: this.clients, freeagentConnected: this.freeagentConnected });
         this.setupEventListeners();
+        // Only call updateDisplay after data is fully loaded
         this.updateDisplay();
         this.startUpdateLoop();
         await this.checkSetupStatus();
+        this.isInitializing = false; // Initialization complete
+        this.hideAllModalsAndSetup(); // Ensure correct state after init
         console.log('TimeTracker initialized');
     }
 
@@ -28,39 +62,58 @@ class TimeTracker {
                 'timers', 'clients', 'activeTimers', 'freeagentConnected'
             ]);
             
-            this.timers = result.timers || {
-                1: { startTime: null, elapsed: 0, todayTotal: 0 },
-                2: { startTime: null, elapsed: 0, todayTotal: 0 },
-                3: { startTime: null, elapsed: 0, todayTotal: 0 }
-            };
-            
-            this.clients = result.clients || {
-                1: { 
-                    name: 'Client 1', 
-                    color: '#FF5722',
-                    project: null,
-                    configured: false
-                },
-                2: { 
-                    name: 'Client 2', 
-                    color: '#2196F3',
-                    project: null,
-                    configured: false
-                },
-                3: { 
-                    name: 'Client 3', 
-                    color: '#4CAF50',
-                    project: null,
-                    configured: false
+            // Initialize timers with defensive defaults
+            this.timers = result.timers || {};
+            for (let i = 1; i <= 3; i++) {
+                if (!this.timers[i]) {
+                    this.timers[i] = { startTime: null, elapsed: 0, todayTotal: 0 };
                 }
-            };
+            }
+            
+            // Initialize clients with defensive defaults
+            this.clients = result.clients || {};
+            const defaultColors = ['#FF5722', '#2196F3', '#4CAF50'];
+            for (let i = 1; i <= 3; i++) {
+                if (!this.clients[i]) {
+                    this.clients[i] = { 
+                        name: `Client ${i}`, 
+                        color: defaultColors[i-1],
+                        project: null,
+                        configured: false
+                    };
+                }
+                // Ensure all required properties exist
+                this.clients[i].name = this.clients[i].name || `Client ${i}`;
+                this.clients[i].color = this.clients[i].color || defaultColors[i-1];
+                this.clients[i].project = this.clients[i].project || null;
+                this.clients[i].configured = this.clients[i].configured || false;
+            }
             
             this.activeTimers = new Set(result.activeTimers || []);
             this.freeagentConnected = result.freeagentConnected || false;
             
         } catch (error) {
             console.error('Error loading data:', error);
+            // Initialize with defaults on error
+            this.initializeDefaults();
         }
+    }
+    
+    initializeDefaults() {
+        this.timers = {
+            1: { startTime: null, elapsed: 0, todayTotal: 0 },
+            2: { startTime: null, elapsed: 0, todayTotal: 0 },
+            3: { startTime: null, elapsed: 0, todayTotal: 0 }
+        };
+        
+        this.clients = {
+            1: { name: 'Client 1', color: '#FF5722', project: null, configured: false },
+            2: { name: 'Client 2', color: '#2196F3', project: null, configured: false },
+            3: { name: 'Client 3', color: '#4CAF50', project: null, configured: false }
+        };
+        
+        this.activeTimers = new Set();
+        this.freeagentConnected = false;
     }
 
     async saveData() {
@@ -84,10 +137,31 @@ class TimeTracker {
         }
 
         // Setup buttons
-        document.getElementById('connect-btn')?.addEventListener('click', () => this.connectFreeAgent());
-        document.getElementById('skip-setup')?.addEventListener('click', () => this.skipSetup());
-        document.getElementById('setup-btn')?.addEventListener('click', () => this.showSetup());
-        document.getElementById('config-btn')?.addEventListener('click', () => this.showConfigModal());
+        const connectBtn = document.getElementById('connect-btn');
+        const skipBtn = document.getElementById('skip-setup');
+        const setupBtn = document.getElementById('setup-btn');
+        const configBtn = document.getElementById('config-btn');
+        
+        if (connectBtn) connectBtn.addEventListener('click', () => this.connectFreeAgent());
+        if (skipBtn) skipBtn.addEventListener('click', () => this.skipSetup());
+        if (setupBtn) {
+            console.log('Setup button found, adding event listener');
+            setupBtn.addEventListener('click', () => {
+                console.log('Setup button clicked');
+                this.showSetup();
+            });
+        } else {
+            console.log('Setup button not found!');
+        }
+        if (configBtn) {
+            console.log('Config button found, adding event listener');
+            configBtn.addEventListener('click', () => {
+                console.log('Config button clicked');
+                this.showConfigModal();
+            });
+        } else {
+            console.log('Config button not found!');
+        }
 
         // Configuration modal events
         document.getElementById('close-config')?.addEventListener('click', () => this.closeConfigModal());
@@ -117,33 +191,13 @@ class TimeTracker {
     async checkSetupStatus() {
         console.log('Checking setup status...', {
             freeagentConnected: this.freeagentConnected,
-            setupSkipped: localStorage.getItem('setupSkipped')
+            setupSkipped: localStorage.getItem('setupSkipped'),
+            extensionId: chrome.runtime.id
         });
-        
-        const setupContainer = document.getElementById('setup-container');
-        const mainContainer = document.getElementById('main-container');
-        
         // Always show the main timer interface by default
-        // Setup is now optional and accessible via the Setup button
-        console.log('Showing main container (timers always visible)');
-        setupContainer.classList.add('hidden');
-        mainContainer.style.display = 'block';
-
+        this.hideAllModalsAndSetup();
         // Update sync status
         this.updateSyncStatus();
-        
-        // Ensure modals are hidden on startup
-        const configModal = document.getElementById('config-modal');
-        const taskModal = document.getElementById('task-modal');
-        
-        if (configModal) {
-            configModal.classList.add('hidden');
-            console.log('Config modal hidden');
-        }
-        if (taskModal) {
-            taskModal.classList.add('hidden');
-            console.log('Task modal hidden');
-        }
     }
 
     async toggleTimer(timerId) {
@@ -212,6 +266,12 @@ class TimeTracker {
     updateDisplay() {
         const now = Date.now();
         
+        // Safety check - ensure clients data is loaded
+        if (!this.clients || Object.keys(this.clients).length === 0) {
+            console.warn('Clients data not loaded yet, skipping display update');
+            return;
+        }
+        
         for (let i = 1; i <= 3; i++) {
             const timer = this.timers[i];
             const tile = document.querySelector(`.timer-tile[data-timer="${i}"]`);
@@ -219,16 +279,30 @@ class TimeTracker {
             const btn = document.getElementById(`timer-${i}-btn`);
             const nameEl = document.getElementById(`client-${i}-name`);
             
-            // Update client name - show project info if configured
+            // Safety check for individual client
             const client = this.clients[i];
+            if (!client) {
+                console.warn(`Client ${i} not found, skipping`);
+                continue;
+            }
+            
+            // Update client name - show project info if configured
             if (client.configured && client.project) {
                 nameEl.innerHTML = `<strong>${client.name}</strong><br><small>${client.project.name}</small>`;
             } else {
-                nameEl.textContent = client.name;
+                nameEl.textContent = client.name || `Client ${i}`;
             }
             
             // Update tile border color
-            tile.style.borderLeftColor = client.color;
+            if (tile) {
+                tile.style.borderLeftColor = client.color || '#ddd';
+            }
+            
+            // Safety check for timer
+            if (!timer) {
+                console.warn(`Timer ${i} not found, skipping`);
+                continue;
+            }
             
             // Calculate current time
             let currentTime = timer.elapsed;
@@ -237,17 +311,27 @@ class TimeTracker {
             }
             
             // Update display
-            display.textContent = this.formatTime(currentTime);
+            if (display) {
+                display.textContent = this.formatTime(currentTime);
+            }
             
             // Update button and tile state
-            if (this.activeTimers.has(i)) {
-                btn.textContent = 'Stop';
-                btn.classList.add('stop');
-                tile.classList.add('active');
-            } else {
-                btn.textContent = 'Start';
-                btn.classList.remove('stop');
-                tile.classList.remove('active');
+            if (btn) {
+                if (this.activeTimers.has(i)) {
+                    btn.textContent = 'Stop';
+                    btn.classList.add('stop');
+                } else {
+                    btn.textContent = 'Start';
+                    btn.classList.remove('stop');
+                }
+            }
+            
+            if (tile) {
+                if (this.activeTimers.has(i)) {
+                    tile.classList.add('active');
+                } else {
+                    tile.classList.remove('active');
+                }
             }
         }
         
@@ -407,9 +491,26 @@ class TimeTracker {
     }
 
     showSetup() {
+        // Prevent showing setup modal during initialization
+        if (this.isInitializing) {
+            console.log('Preventing setup modal during initialization');
+            return;
+        }
+        
         console.log('Showing setup modal');
-        document.getElementById('setup-container').classList.remove('hidden');
-        document.getElementById('main-container').style.display = 'none';
+        const setupContainer = document.getElementById('setup-container');
+        const mainContainer = document.getElementById('main-container');
+        
+        // Show setup container
+        if (setupContainer) {
+            setupContainer.classList.remove('hidden');
+            setupContainer.style.display = 'block';
+        }
+        
+        // Hide main container
+        if (mainContainer) {
+            mainContainer.style.display = 'none';
+        }
         
         // Hide other modals
         document.getElementById('config-modal').classList.add('hidden');
@@ -423,16 +524,30 @@ class TimeTracker {
             statusEl.textContent = 'Connected to FreeAgent ✅';
             statusEl.className = 'sync-status connected';
         } else {
-            statusEl.textContent = 'Not connected to FreeAgent';
+            statusEl.innerHTML = `Not connected to FreeAgent<br><small>Extension ID: ${chrome.runtime.id}</small>`;
             statusEl.className = 'sync-status';
         }
     }
 
     // Configuration Modal Methods
     async showConfigModal() {
+        // Prevent showing config modal during initialization
+        if (this.isInitializing) {
+            console.log('Preventing config modal during initialization');
+            return;
+        }
+        
+        // Always show config modal, but warn if not connected
+        console.log('Showing configuration modal');
+        document.getElementById('config-modal').classList.remove('hidden');
+        
         if (!this.freeagentConnected) {
-            // Show setup modal instead of error
-            this.showSetup();
+            // Show warning in the modal but still allow configuration
+            const errorEl = document.getElementById('config-error');
+            if (errorEl) {
+                errorEl.textContent = 'Not connected to FreeAgent. Connect first to sync with projects.';
+                errorEl.classList.remove('hidden');
+            }
             return;
         }
 

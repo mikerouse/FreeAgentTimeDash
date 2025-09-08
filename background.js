@@ -59,7 +59,18 @@ class BackgroundTimeTracker {
     }
 
     setupEventListeners() {
-        // Listen for messages from popup
+        // Listen for extension installation/startup
+        chrome.runtime.onInstalled.addListener(() => {
+            // Enable side panel on all websites
+            chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+        });
+        
+        // Action click handler - open side panel
+        chrome.action.onClicked.addListener((tab) => {
+            chrome.sidePanel.open({ tabId: tab.id });
+        });
+
+        // Listen for keyboard commands
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             this.handleMessage(message, sender, sendResponse);
             // Return true to indicate we'll send a response asynchronously
