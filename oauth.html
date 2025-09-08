@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>FreeAgent OAuth</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .status {
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .success {
+            background: #e8f5e8;
+            color: #2e7d2e;
+            border: 1px solid #a3d3a3;
+        }
+        .error {
+            background: #ffe8e8;
+            color: #d32f2f;
+            border: 1px solid #ffb3b3;
+        }
+        .loading {
+            background: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #90caf9;
+        }
+    </style>
+</head>
+<body>
+    <h2>FreeAgent Integration</h2>
+    <div id="status" class="status loading">
+        Processing authorization...
+    </div>
+    
+    <script>
+        // OAuth callback handler for FreeAgent
+        class OAuthHandler {
+            constructor() {
+                this.init();
+            }
+            
+            async init() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const code = urlParams.get('code');
+                const error = urlParams.get('error');
+                const statusEl = document.getElementById('status');
+                
+                if (error) {
+                    statusEl.className = 'status error';
+                    statusEl.innerHTML = `
+                        <h3>Authorization Failed</h3>
+                        <p>Error: ${error}</p>
+                        <p>Please try again.</p>
+                    `;
+                    return;
+                }
+                
+                if (code) {
+                    try {
+                        await this.exchangeCodeForTokens(code);
+                        statusEl.className = 'status success';
+                        statusEl.innerHTML = `
+                            <h3>Success!</h3>
+                            <p>Your FreeAgent account has been connected.</p>
+                            <p>You can now close this tab.</p>
+                        `;
+                        
+                        // Close the tab after a delay
+                        setTimeout(() => {
+                            window.close();
+                        }, 2000);
+                        
+                    } catch (error) {
+                        statusEl.className = 'status error';
+                        statusEl.innerHTML = `
+                            <h3>Connection Failed</h3>
+                            <p>Error: ${error.message}</p>
+                            <p>Please try again.</p>
+                        `;
+                    }
+                } else {
+                    statusEl.className = 'status error';
+                    statusEl.innerHTML = `
+                        <h3>Invalid Response</h3>
+                        <p>No authorization code received.</p>
+                        <p>Please try the authorization process again.</p>
+                    `;
+                }
+            }
+            
+            async exchangeCodeForTokens(code) {
+                // You'll need to replace these with your actual FreeAgent app credentials
+                const clientId = 'YOUR_FREEAGENT_CLIENT_ID';
+                const clientSecret = 'YOUR_FREEAGENT_CLIENT_SECRET';
+                const redirectUri = chrome.runtime.getURL('oauth.html');
+                
+                const response = await fetch('https://api.freeagent.com/v2/token_endpoint', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        grant_type: 'authorization_code',
+                        client_id: clientId,
+                        client_secret: clientSecret,
+                        code: code,
+                        redirect_uri: redirectUri
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(`Token exchange failed: ${response.status} - ${errorData}`);
+                }
+                
+                const tokens = await response.json();
+                
+                // Store tokens securely
+                await chrome.storage.local.set({
+                    freeagentTokens: {
+                        access_token: tokens.access_token,
+                        refresh_token: tokens.refresh_token,
+                        expires_at: Date.now() + (tokens.expires_in * 1000)
+                    },
+                    freeagentConnected: true
+                });
+                
+                // Fetch user profile and available projects
+                await this.fetchFreeAgentData(tokens.access_token);
+                
+                console.log('FreeAgent tokens stored successfully');
+            }
+            
+            async fetchFreeAgentData(accessToken) {
+                try {
+                    // Fetch user profile
+                    const profileResponse = await fetch('https://api.freeagent.com/v2/users/me', {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    if (profileResponse.ok) {
+                        const profile = await profileResponse.json();
+                        console.log('FreeAgent profile:', profile);
+                    }
+                    
+                    // Fetch available projects
+                    const projectsResponse = await fetch('https://api.freeagent.com/v2/projects?view=active', {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    if (projectsResponse.ok) {
+                        const projectsData = await projectsResponse.json();
+                        
+                        // Store project list for user selection
+                        await chrome.storage.local.set({
+                            freeagentProjects: projectsData.projects || []
+                        });
+                        
+                        console.log('FreeAgent projects:', projectsData.projects);
+                    }
+                    
+                } catch (error) {
+                    console.error('Error fetching FreeAgent data:', error);
+                }
+            }
+        }
+        
+        // Start OAuth handling
+        new OAuthHandler();
+    </script>
+</body>
+</html>
