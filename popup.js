@@ -173,6 +173,11 @@ class TimeTracker {
         document.getElementById('save-config')?.addEventListener('click', () => this.saveConfiguration());
         document.getElementById('cancel-config')?.addEventListener('click', () => this.closeConfigPanel());
 
+        // Client selection changes
+        document.getElementById('client-select-current')?.addEventListener('change', (e) => {
+            this.onClientSelected(e.target.value);
+        });
+
         // Task modal events
         document.getElementById('close-task')?.addEventListener('click', () => this.closeTaskModal());
         document.getElementById('cancel-task')?.addEventListener('click', () => this.closeTaskModal());
@@ -561,13 +566,14 @@ class TimeTracker {
                 errorEl.textContent = 'Not connected to FreeAgent. Connect first to sync with projects.';
                 errorEl.classList.remove('hidden');
             }
-            // Hide project selection if not connected
+            // Hide client and project selection if not connected
+            document.getElementById('client-row').style.display = 'none';
             document.getElementById('project-row').style.display = 'none';
             return;
         }
 
-        // Show project selection and load projects
-        document.getElementById('project-row').style.display = 'flex';
+        // Show client and project selection
+        document.getElementById('client-row').style.display = 'flex';
         document.getElementById('config-error-panel').classList.add('hidden');
         
         // Initialize FreeAgent API if not already done
@@ -581,7 +587,7 @@ class TimeTracker {
             }
         }
 
-        await this.loadProjectsForConfiguration();
+        await this.loadClientsForConfiguration();
     }
 
     closeConfigPanel() {
@@ -590,14 +596,14 @@ class TimeTracker {
         configPanel.classList.add('hidden');
     }
 
-    async loadProjectsForConfiguration() {
+    async loadClientsForConfiguration() {
         const loadingEl = document.getElementById('loading-projects-panel');
         const errorEl = document.getElementById('config-error-panel');
 
         try {
             if (loadingEl) {
                 loadingEl.classList.remove('hidden');
-                loadingEl.textContent = 'Loading active projects...';
+                loadingEl.textContent = 'Loading clients...';
             }
             if (errorEl) {
                 errorEl.classList.add('hidden');
@@ -608,71 +614,103 @@ class TimeTracker {
                 await this.freeagentAPI.init();
             }
 
-            const projects = await this.freeagentAPI.getProjects();
+            // Use the more efficient method that only loads clients with active projects
+            const contacts = await this.freeagentAPI.getContactsWithActiveProjects();
             
-            // Populate project dropdown for current timer
-            const select = document.getElementById('project-select-current');
+            // Populate client dropdown
+            const clientSelect = document.getElementById('client-select-current');
+            clientSelect.innerHTML = '<option value="">Select Client...</option>';
             
-            // Clear existing options
-            select.innerHTML = '<option value="">Select Project...</option>';
+            // Sort contacts by name and add to dropdown
+            const sortedContacts = Object.values(contacts).sort((a, b) => a.name.localeCompare(b.name));
             
-            // Add projects grouped by client as per FreeAgent API best practices
-            const clientNames = Object.keys(projects).sort(); // Sort clients alphabetically
-            
-            clientNames.forEach(clientName => {
-                const optgroup = document.createElement('optgroup');
-                optgroup.label = `${clientName} (${projects[clientName].length} project${projects[clientName].length !== 1 ? 's' : ''})`;
+            sortedContacts.forEach(contact => {
+                const option = document.createElement('option');
+                option.value = contact.url;
+                option.textContent = contact.name;
+                option.dataset.contactName = contact.name;
+                option.title = `${contact.name}${contact.email ? ' - ' + contact.email : ''}`;
                 
-                projects[clientName].forEach(project => {
-                    const option = document.createElement('option');
-                    option.value = project.url;
-                    
-                    // Enhanced display with project status and billing info
-                    let displayText = project.name;
-                    if (project.billing_rate && parseFloat(project.billing_rate) > 0) {
-                        displayText += ` (${project.currency}${project.billing_rate}/${project.billing_period || 'hour'})`;
-                    }
-                    if (project.budget && parseFloat(project.budget) > 0) {
-                        displayText += ` [Budget: ${project.currency}${project.budget}]`;
-                    }
-                    
-                    option.textContent = displayText;
-                    option.dataset.clientName = project.contact_name;
-                    option.dataset.projectName = project.name;
-                    option.dataset.currency = project.currency;
-                    option.dataset.billingRate = project.billing_rate;
-                    option.dataset.billingPeriod = project.billing_period;
-                    option.title = `Client: ${project.contact_name}\nProject: ${project.name}\nCurrency: ${project.currency}${project.billing_rate ? '\nRate: ' + project.currency + project.billing_rate + '/' + (project.billing_period || 'hour') : ''}`;
-                    
-                    // Check if this project is currently selected for this timer
-                    if (this.clients[this.currentConfigTimer].project && 
-                        this.clients[this.currentConfigTimer].project.url === project.url) {
-                        option.selected = true;
-                    }
-                    
-                    optgroup.appendChild(option);
-                });
-                
-                select.appendChild(optgroup);
+                clientSelect.appendChild(option);
             });
+
+            // If this timer already has a project selected, find and select the client
+            if (this.clients[this.currentConfigTimer].project && this.clients[this.currentConfigTimer].project.contact) {
+                const clientUrl = this.clients[this.currentConfigTimer].project.contact;
+                clientSelect.value = clientUrl;
+                
+                // Load projects for this client
+                await this.onClientSelected(clientUrl);
+            }
 
             if (loadingEl) {
                 loadingEl.classList.add('hidden');
             }
             
-            // Show project count in success message
-            const totalProjects = Object.values(projects).reduce((sum, clientProjects) => sum + clientProjects.length, 0);
-            console.log(`Loaded ${totalProjects} active projects from ${clientNames.length} clients for timer configuration`);
+            console.log(`Loaded ${sortedContacts.length} clients for timer configuration`);
             
         } catch (error) {
-            console.error('Error loading projects:', error);
+            console.error('Error loading clients:', error);
             if (loadingEl) {
                 loadingEl.classList.add('hidden');
             }
             if (errorEl) {
-                errorEl.textContent = `Failed to load projects: ${error.message}. Please check your FreeAgent connection.`;
+                errorEl.textContent = `Failed to load clients: ${error.message}. Please check your FreeAgent connection.`;
                 errorEl.classList.remove('hidden');
             }
+        }
+    }
+
+    async onClientSelected(clientUrl) {
+        const projectSelect = document.getElementById('project-select-current');
+        const projectRow = document.getElementById('project-row');
+        
+        if (!clientUrl) {
+            projectRow.style.display = 'none';
+            projectSelect.innerHTML = '<option value="">Select Project...</option>';
+            return;
+        }
+
+        try {
+            projectRow.style.display = 'flex';
+            projectSelect.innerHTML = '<option value="">Loading projects...</option>';
+            
+            const projects = await this.freeagentAPI.getProjectsForContact(clientUrl);
+            
+            projectSelect.innerHTML = '<option value="">Select Project...</option>';
+            
+            projects.forEach(project => {
+                const option = document.createElement('option');
+                option.value = project.url;
+                
+                // Enhanced display with billing info
+                let displayText = project.name;
+                if (project.billing_rate && parseFloat(project.billing_rate) > 0) {
+                    displayText += ` (${project.currency}${project.billing_rate}/${project.billing_period || 'hour'})`;
+                }
+                if (project.budget && parseFloat(project.budget) > 0) {
+                    displayText += ` [Budget: ${project.currency}${project.budget}]`;
+                }
+                
+                option.textContent = displayText;
+                option.dataset.projectName = project.name;
+                option.dataset.contact = project.contact;
+                option.title = `Project: ${project.name}\nCurrency: ${project.currency}${project.billing_rate ? '\nRate: ' + project.currency + project.billing_rate + '/' + (project.billing_period || 'hour') : ''}`;
+                
+                // Check if this project is currently selected for this timer
+                if (this.clients[this.currentConfigTimer].project && 
+                    this.clients[this.currentConfigTimer].project.url === project.url) {
+                    option.selected = true;
+                }
+                
+                projectSelect.appendChild(option);
+            });
+            
+            console.log(`Loaded ${projects.length} projects for selected client`);
+            
+        } catch (error) {
+            console.error('Error loading projects for client:', error);
+            projectSelect.innerHTML = '<option value="">Error loading projects</option>';
         }
     }
 
@@ -697,6 +735,7 @@ class TimeTracker {
         try {
             const timerId = this.currentConfigTimer;
             const timerNameInput = document.getElementById('timer-name-input');
+            const clientSelect = document.getElementById('client-select-current');
             const projectSelect = document.getElementById('project-select-current');
             const colorInput = document.getElementById('color-select-current');
             
@@ -705,11 +744,14 @@ class TimeTracker {
             this.clients[timerId].color = colorInput.value;
             
             if (projectSelect.value) {
-                const selectedOption = projectSelect.selectedOptions[0];
+                const selectedProjectOption = projectSelect.selectedOptions[0];
+                const selectedClientOption = clientSelect.selectedOptions[0];
+                
                 this.clients[timerId].project = {
-                    url: selectedOption.value,
-                    name: selectedOption.textContent,
-                    contact_name: selectedOption.dataset.clientName
+                    url: selectedProjectOption.value,
+                    name: selectedProjectOption.dataset.projectName,
+                    contact: selectedProjectOption.dataset.contact,
+                    contact_name: selectedClientOption.dataset.contactName
                 };
                 this.clients[timerId].configured = true;
             } else {

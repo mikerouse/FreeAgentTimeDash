@@ -4,6 +4,7 @@ class FreeAgentAPI {
 		this.auth = new FreeAgentAuth();
 		this.currentUser = null;
 		this.projectsCache = null;
+		this.contactsCache = null;
 		this.tasksCache = new Map();
 	}
 
@@ -35,6 +36,111 @@ class FreeAgentAPI {
 	}
 
 	/**
+	 * Get all contacts (clients)
+	 * Following FreeAgent API best practices from docs/contacts.md
+	 */
+	async getContacts(forceRefresh = false) {
+		if (this.contactsCache && !forceRefresh) {
+			return this.contactsCache;
+		}
+
+		try {
+			// Use optimal API parameters as per documentation:
+			// - view=clients: Show clients (contacts who can have projects) - more specific than 'active'
+			// - sort=name: Sort by concatenation of organisation_name, last_name and first_name (default)
+			const response = await this.auth.apiRequest('/contacts?view=clients&sort=name');
+			if (!response.ok) {
+				throw new Error(`Failed to load contacts: ${response.status}`);
+			}
+
+			const data = await response.json();
+			const contacts = data.contacts || [];
+
+			// Create a map of contact URL to contact data for easy lookup
+			const contactsMap = {};
+			contacts.forEach(contact => {
+				// Follow FreeAgent naming convention as per docs:
+				// organisation_name takes priority, fallback to first_name + last_name
+				let displayName;
+				if (contact.organisation_name) {
+					displayName = contact.organisation_name;
+				} else if (contact.first_name || contact.last_name) {
+					displayName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
+				} else {
+					displayName = 'Unnamed Contact';
+				}
+
+				contactsMap[contact.url] = {
+					url: contact.url,
+					name: displayName,
+					organisation_name: contact.organisation_name,
+					first_name: contact.first_name,
+					last_name: contact.last_name,
+					email: contact.email,
+					active_projects_count: contact.active_projects_count || 0,
+					status: contact.status,
+					created_at: contact.created_at,
+					updated_at: contact.updated_at
+				};
+			});
+
+			this.contactsCache = contactsMap;
+			console.log(`Loaded ${contacts.length} client contacts for project selection`);
+			return contactsMap;
+		} catch (error) {
+			console.error('Error loading contacts:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get contacts who have active projects only
+	 * More efficient for time tracking - only shows clients with billable work
+	 */
+	async getContactsWithActiveProjects(forceRefresh = false) {
+		try {
+			// Use the specialized view=active_projects filter as per docs
+			const response = await this.auth.apiRequest('/contacts?view=active_projects&sort=name');
+			if (!response.ok) {
+				throw new Error(`Failed to load contacts with active projects: ${response.status}`);
+			}
+
+			const data = await response.json();
+			const contacts = data.contacts || [];
+
+			// Create a map similar to getContacts but filtered to only active project clients
+			const contactsMap = {};
+			contacts.forEach(contact => {
+				let displayName;
+				if (contact.organisation_name) {
+					displayName = contact.organisation_name;
+				} else if (contact.first_name || contact.last_name) {
+					displayName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
+				} else {
+					displayName = 'Unnamed Contact';
+				}
+
+				contactsMap[contact.url] = {
+					url: contact.url,
+					name: displayName,
+					organisation_name: contact.organisation_name,
+					first_name: contact.first_name,
+					last_name: contact.last_name,
+					email: contact.email,
+					active_projects_count: contact.active_projects_count || 0,
+					status: contact.status
+				};
+			});
+
+			console.log(`Loaded ${contacts.length} contacts with active projects`);
+			return contactsMap;
+		} catch (error) {
+			console.error('Error loading contacts with active projects:', error);
+			throw error;
+		}
+	}
+
+	/**
 	 * Get all active projects grouped by client
 	 * Following FreeAgent API best practices from docs/projects.md
 	 */
@@ -44,11 +150,13 @@ class FreeAgentAPI {
 		}
 
 		try {
+			// Load contacts first to ensure we have client names
+			const contacts = await this.getContacts(forceRefresh);
+
 			// Use optimal API parameters as per documentation:
 			// - view=active: Only show active projects for time tracking
-			// - nested=true: Include full contact details in response
-			// - sort=contact_name: Group similar clients together
-			const response = await this.auth.apiRequest('/projects?view=active&nested=true&sort=contact_name');
+			// - sort=contact: Group by contact for better organization
+			const response = await this.auth.apiRequest('/projects?view=active&sort=contact');
 			if (!response.ok) {
 				throw new Error(`Failed to load projects: ${response.status}`);
 			}
@@ -56,10 +164,13 @@ class FreeAgentAPI {
 			const data = await response.json();
 			const projects = data.projects || [];
 
-			// Group projects by client (contact_name) as recommended in docs
+			// Group projects by client using the contacts data
 			const groupedProjects = {};
 			projects.forEach(project => {
-				const clientName = project.contact_name || 'Unknown Client';
+				// Look up the contact information from our contacts cache
+				const contact = contacts[project.contact];
+				const clientName = contact ? contact.name : 'Unknown Client';
+				
 				if (!groupedProjects[clientName]) {
 					groupedProjects[clientName] = [];
 				}
@@ -68,7 +179,8 @@ class FreeAgentAPI {
 				groupedProjects[clientName].push({
 					url: project.url,                    // Required for creating timeslips
 					name: project.name,                  // Display name
-					contact_name: project.contact_name,  // Client identification
+					contact: project.contact,            // Contact URI
+					contact_name: clientName,            // Resolved client name
 					currency: project.currency,          // For billing calculations
 					billing_rate: project.normal_billing_rate, // Default rate
 					billing_period: project.billing_period,
@@ -91,6 +203,36 @@ class FreeAgentAPI {
 			return groupedProjects;
 		} catch (error) {
 			console.error('Error loading projects:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get projects for a specific contact/client
+	 */
+	async getProjectsForContact(contactUrl, forceRefresh = false) {
+		try {
+			const response = await this.auth.apiRequest(`/projects?view=active&contact=${encodeURIComponent(contactUrl)}&sort=name`);
+			if (!response.ok) {
+				throw new Error(`Failed to load projects for contact: ${response.status}`);
+			}
+
+			const data = await response.json();
+			const projects = (data.projects || []).map(project => ({
+				url: project.url,
+				name: project.name,
+				contact: project.contact,
+				currency: project.currency,
+				billing_rate: project.normal_billing_rate,
+				billing_period: project.billing_period,
+				status: project.status,
+				budget: project.budget,
+				budget_units: project.budget_units
+			}));
+
+			return projects;
+		} catch (error) {
+			console.error('Error loading projects for contact:', error);
 			throw error;
 		}
 	}
@@ -299,6 +441,7 @@ class FreeAgentAPI {
 	clearCaches() {
 		console.log('Clearing FreeAgent API caches');
 		this.projectsCache = null;
+		this.contactsCache = null;
 		this.tasksCache.clear();
 	}
 

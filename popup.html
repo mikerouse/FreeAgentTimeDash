@@ -350,7 +350,7 @@
         }
 
         .config-row label {
-            width: 80px;
+            width: 90px;
             font-weight: bold;
             color: #555;
         }
@@ -453,7 +453,13 @@
                     <label>Color:</label>
                     <input type="color" id="color-select-current" value="#FF5722">
                 </div>
-                <div class="config-row" id="project-row">
+                <div class="config-row" id="client-row">
+                    <label>Client:</label>
+                    <select id="client-select-current" class="project-select">
+                        <option value="">Select Client...</option>
+                    </select>
+                </div>
+                <div class="config-row" id="project-row" style="display: none;">
                     <label>Project:</label>
                     <select id="project-select-current" class="project-select">
                         <option value="">Select Project...</option>
