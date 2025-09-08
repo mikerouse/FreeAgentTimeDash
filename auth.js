@@ -117,18 +117,12 @@ class FreeAgentAuth {
 	 * Can be configured for local development or production
 	 */
 	getProxyUrl() {
-		// For local development
-		if (chrome.runtime.id === 'development-extension-id') {
-			return 'http://localhost:3000';
-		}
+		// For local development testing (optional)
+		// Uncomment the line below if you want to test with local proxy
+		// return 'http://localhost:3000';
 		
-		// For production - replace with your deployed proxy URL
-		// Options for hosting:
-		// - Vercel: https://your-app.vercel.app
-		// - Netlify Functions: https://your-app.netlify.app
-		// - Heroku: https://your-app.herokuapp.com
-		// - AWS Lambda: https://your-api.execute-api.region.amazonaws.com
-		return 'http://localhost:3000'; // Change this to your production URL
+		// Production Render.com URL
+		return 'https://freeagenttimedash.onrender.com';
 	}
 
 

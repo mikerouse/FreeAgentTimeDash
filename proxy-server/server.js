@@ -4,6 +4,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 const app = express();
+// Render.com uses PORT environment variable (usually 10000)
 const PORT = process.env.PORT || 3000;
 
 // Middleware

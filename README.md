@@ -2,9 +2,13 @@
 
 A Chrome extension designed specifically for developers with ADHD to track time more effectively across multiple clients with automatic FreeAgent integration.
 
-Extension ID: nbohfjpbcaflnpchhibmhfdjogeafcim
-OAuth Redirect URI:
-```chrome-extension://nbohfjpbcaflnpchhibmhfdjogeafcim/oauth.html```
+## Security Implementation
+
+✅ **OAuth credentials are secured using:**
+- Chrome Identity API for authentication flow
+- Proxy server on Render.com for token exchange
+- Client secret stored only on server (never in extension code)
+- Ready for Chrome Web Store submission
 
 ## Features
 
@@ -25,28 +29,20 @@ OAuth Redirect URI:
 3. Click "Load unpacked" and select the folder containing these files
 4. The Time Tracker icon should appear in your browser toolbar
 
-### 2. FreeAgent API Setup
+### 2. FreeAgent Connection
 
-To connect with FreeAgent, you'll need to create API credentials:
+The extension uses secure OAuth authentication:
 
-1. Go to [FreeAgent Developer Dashboard](https://dev.freeagent.com/apps)
-2. Create a new app with these settings:
-   - **App Name**: "Personal Time Tracker" (or whatever you prefer)
-   - **OAuth Redirect URIs**: 
-     ```
-     chrome-extension://[YOUR_EXTENSION_ID]/oauth.html
-     ```
-   - **Permissions**: `timeslips:read`, `timeslips:write`, `projects:read`, `users:read`
+1. **Proxy Server**: Deployed at `https://freeagenttimedash.onrender.com`
+2. **Client ID**: `t7BdB9vrNrTG9rcxQXMy7Q` (configured in extension)
+3. **Client Secret**: Stored securely on proxy server
+4. **OAuth Flow**: Chrome Identity API handles authentication
 
-3. After creating the app, note down:
-   - Client ID
-   - Client Secret
-
-4. Update the OAuth credentials in `oauth.html`:
-   ```javascript
-   const clientId = 'YOUR_FREEAGENT_CLIENT_ID';
-   const clientSecret = 'YOUR_FREEAGENT_CLIENT_SECRET';
-   ```
+To connect:
+1. Click the extension icon
+2. Click "Connect FreeAgent"
+3. Authorize the application
+4. Start tracking time!
 
 ### 3. Find Your Extension ID
 
@@ -70,7 +66,8 @@ To connect with FreeAgent, you'll need to create API credentials:
 ├── popup.html            # Main interface
 ├── popup.js              # UI logic and timer controls
 ├── background.js         # Persistent timer logic and notifications
-├── oauth.html           # FreeAgent OAuth callback handler
+├── auth.js              # Secure OAuth authentication service
+├── oauth.html           # (Deprecated - kept for reference)
 ├── icons/               # Extension icons (16x16, 48x48, 128x128)
 │   ├── icon16.png
 │   ├── icon48.png
@@ -125,9 +122,10 @@ You can create simple colored circles or use a timer icon. For now, the extensio
 - Check the console for error messages
 
 ### FreeAgent connection fails
-- Verify your Client ID and Client Secret are correct
-- Make sure the redirect URI matches exactly (including extension ID)
-- Check that your FreeAgent app has the correct permissions
+- Ensure proxy server is running at https://freeagenttimedash.onrender.com
+- Check that your extension ID matches the FreeAgent redirect URI
+- Verify FreeAgent app permissions are correct
+- Check browser console for specific error messages
 
 ### Timers don't persist
 - Check Chrome storage permissions

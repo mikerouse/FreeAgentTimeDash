@@ -86,14 +86,45 @@ getProxyUrl() {
 }
 ```
 
-### Option 3: Deploy to Render (FREE)
+### Option 3: Deploy to Render (FREE) - RECOMMENDED
 
-1. Push your code to GitHub
-2. Go to https://render.com
-3. Create a new Web Service
-4. Connect your GitHub repo
-5. Set environment variables in Render dashboard
-6. Deploy
+1. **Push your proxy-server folder to GitHub**
+   - Create a new repository or add to existing one
+   - Push the proxy-server folder
+
+2. **Create a Render Web Service**
+   - Go to https://render.com
+   - Click "New +" → "Web Service"
+   - Connect your GitHub account if not already connected
+   - Select your repository
+
+3. **Configure the Web Service**
+   - **Name:** `freeagent-oauth-proxy` (or your choice)
+   - **Region:** Choose closest to you
+   - **Branch:** `main` (or your default branch)
+   - **Root Directory:** `proxy-server` (if proxy-server is in a subdirectory)
+   - **Runtime:** `Node`
+   - **Build Command:** `npm install`
+   - **Start Command:** `npm start`
+   - **Instance Type:** `Free`
+
+4. **Add Environment Variables**
+   Click "Advanced" and add:
+   - Key: `FREEAGENT_CLIENT_ID` | Value: `t7BdB9vrNrTG9rcxQXMy7Q`
+   - Key: `FREEAGENT_CLIENT_SECRET` | Value: `[Your secret from FreeAgent]`
+   - Key: `PORT` | Value: `10000` (Render uses port 10000)
+
+5. **Deploy**
+   - Click "Create Web Service"
+   - Wait for deployment (takes 2-5 minutes)
+   - Your URL will be: `https://freeagenttimedash.onrender.com`
+
+6. **Update your extension's auth.js**
+   ```javascript
+   getProxyUrl() {
+       return 'https://freeagenttimedash.onrender.com';
+   }
+   ```
 
 ### Option 4: Deploy to Railway
 

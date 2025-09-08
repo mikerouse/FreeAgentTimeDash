@@ -79,40 +79,21 @@ https://<YOUR_EXTENSION_ID>.chromiumapp.org/
 3. Find your extension
 4. Copy the ID shown under the extension name
 
-## Backend Proxy Example (if needed)
+## Backend Proxy Status
 
-If FreeAgent requires client_secret, here's a simple Node.js proxy:
+✅ **Proxy Server Deployed!**
 
-```javascript
-// server.js
-const express = require('express');
-const axios = require('axios');
-const app = express();
-
-app.use(express.json());
-
-app.post('/api/freeagent/token', async (req, res) => {
-    const { code, redirect_uri } = req.body;
-    
-    try {
-        const response = await axios.post('https://api.freeagent.com/v2/token_endpoint', {
-            grant_type: 'authorization_code',
-            client_id: process.env.FREEAGENT_CLIENT_ID,
-            client_secret: process.env.FREEAGENT_CLIENT_SECRET, // Stored securely on server
-            code: code,
-            redirect_uri: redirect_uri
-        });
-        
-        res.json(response.data);
-    } catch (error) {
-        res.status(500).json({ error: 'Token exchange failed' });
-    }
-});
-
-app.listen(3000);
+Your OAuth proxy server is now running at:
+```
+https://freeagenttimedash.onrender.com
 ```
 
-Then update `auth.js` to use your proxy server instead of calling FreeAgent directly.
+The proxy server securely handles:
+- Token exchange with client_secret
+- Token refresh
+- All OAuth operations requiring the secret
+
+The extension's `auth.js` has been configured to use this proxy URL.
 
 ## Chrome Web Store Submission
 
