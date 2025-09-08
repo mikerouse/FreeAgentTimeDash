@@ -194,6 +194,13 @@ class TimeTracker {
         // Drafts section events
         document.getElementById('toggle-drafts')?.addEventListener('click', () => this.toggleDrafts());
 
+        // Settings events
+        document.getElementById('settings-btn')?.addEventListener('click', () => this.openSettings());
+        document.getElementById('close-settings')?.addEventListener('click', () => this.closeSettings());
+        document.getElementById('cancel-settings')?.addEventListener('click', () => this.closeSettings());
+        document.getElementById('save-settings')?.addEventListener('click', () => this.saveSettings());
+        document.getElementById('reset-settings')?.addEventListener('click', () => this.resetSettings());
+
         // Project selection changes
         for (let i = 1; i <= 3; i++) {
             document.getElementById(`project-select-${i}`)?.addEventListener('change', (e) => {
@@ -830,22 +837,36 @@ class TimeTracker {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('task-work-date').value = today;
         
+        // Load user's default rounding preference
+        const result = await chrome.storage.local.get(['timeTrackingSettings']);
+        const settings = result.timeTrackingSettings || this.getDefaultSettings();
+        document.getElementById('time-rounding').value = settings.defaultRounding;
+        
         // Initialize time rounding display
-        this.updateTimeRounding();
+        await this.updateTimeRounding();
         
         document.getElementById('task-modal').classList.remove('hidden');
         
         await this.loadTasksForSelection();
     }
 
-    updateTimeRounding() {
+    async updateTimeRounding() {
         if (!this.pendingTimeslip) return;
         
         const roundingSelect = document.getElementById('time-rounding');
         const roundingMinutes = parseInt(roundingSelect.value);
         
-        // Calculate rounded time using FreeAgent API method
-        const roundedHours = this.freeagentAPI.roundTime(this.pendingTimeslip.hours, roundingMinutes);
+        // Get user's rounding method preference
+        const result = await chrome.storage.local.get(['timeTrackingSettings']);
+        const settings = result.timeTrackingSettings || this.getDefaultSettings();
+        
+        // Calculate rounded time using appropriate method
+        let roundedHours;
+        if (settings.roundingMethod === 'up') {
+            roundedHours = this.freeagentAPI.roundTimeUp(this.pendingTimeslip.hours, roundingMinutes);
+        } else {
+            roundedHours = this.freeagentAPI.roundTime(this.pendingTimeslip.hours, roundingMinutes);
+        }
         
         // Update display
         const roundedTimeElement = document.getElementById('task-time-rounded');
@@ -1200,6 +1221,66 @@ class TimeTracker {
         } catch (error) {
             console.error('Error loading drafts indicator:', error);
         }
+    }
+
+    async openSettings() {
+        const modal = document.getElementById('settings-modal');
+        
+        // Load current settings
+        const result = await chrome.storage.local.get(['timeTrackingSettings']);
+        const settings = result.timeTrackingSettings || this.getDefaultSettings();
+        
+        // Populate form
+        document.getElementById('default-rounding').value = settings.defaultRounding;
+        document.getElementById('rounding-method').value = settings.roundingMethod;
+        document.getElementById('auto-save-drafts').checked = settings.autoSaveDrafts;
+        document.getElementById('max-drafts').value = settings.maxDrafts;
+        
+        modal.classList.remove('hidden');
+    }
+
+    closeSettings() {
+        document.getElementById('settings-modal').classList.add('hidden');
+    }
+
+    async saveSettings() {
+        try {
+            const settings = {
+                defaultRounding: parseInt(document.getElementById('default-rounding').value),
+                roundingMethod: document.getElementById('rounding-method').value,
+                autoSaveDrafts: document.getElementById('auto-save-drafts').checked,
+                maxDrafts: parseInt(document.getElementById('max-drafts').value)
+            };
+
+            await chrome.storage.local.set({ timeTrackingSettings: settings });
+            this.closeSettings();
+            this.showNotification('⚙️ Settings saved');
+            
+        } catch (error) {
+            console.error('Error saving settings:', error);
+            this.showNotification('❌ Failed to save settings', 'error');
+        }
+    }
+
+    async resetSettings() {
+        const settings = this.getDefaultSettings();
+        
+        // Populate form with defaults
+        document.getElementById('default-rounding').value = settings.defaultRounding;
+        document.getElementById('rounding-method').value = settings.roundingMethod;
+        document.getElementById('auto-save-drafts').checked = settings.autoSaveDrafts;
+        document.getElementById('max-drafts').value = settings.maxDrafts;
+        
+        this.showNotification('🔄 Settings reset to defaults');
+    }
+
+    getDefaultSettings() {
+        return {
+            defaultRounding: 30,      // 30-minute default rounding
+            roundingMethod: 'round',  // Round to nearest
+            autoSaveDrafts: true,     // Auto-save drafts
+            maxDrafts: 10            // Keep max 10 drafts
+        };
     }
 }
 

@@ -809,8 +809,56 @@
             </div>
         </div>
     </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ Time Tracking Settings</h3>
+                <button id="close-settings" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="config-row">
+                    <label>Default Time Rounding:</label>
+                    <select id="default-rounding" class="rounding-select">
+                        <option value="0">No rounding (exact time)</option>
+                        <option value="15">15 minutes</option>
+                        <option value="30" selected>30 minutes</option>
+                        <option value="60">1 hour</option>
+                    </select>
+                    <small class="rounding-hint">This will be the default selection when creating timeslips</small>
+                </div>
+                
+                <div class="config-row">
+                    <label>Rounding Method:</label>
+                    <select id="rounding-method" class="rounding-select">
+                        <option value="round">Round to nearest (up or down)</option>
+                        <option value="up">Always round up (never bill less)</option>
+                    </select>
+                    <small class="rounding-hint">Choose how time intervals are rounded</small>
+                </div>
+                
+                <div class="config-row">
+                    <label>Auto-save drafts:</label>
+                    <input type="checkbox" id="auto-save-drafts" checked>
+                    <small class="rounding-hint">Automatically save draft when timer stops</small>
+                </div>
+                
+                <div class="config-row">
+                    <label>Max drafts to keep:</label>
+                    <input type="number" id="max-drafts" value="10" min="1" max="50" style="width: 80px;">
+                    <small class="rounding-hint">Maximum number of drafts to store</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-settings" class="setup-button primary">Save Settings</button>
+                <button id="reset-settings" class="setup-button secondary">Reset to Defaults</button>
+                <button id="cancel-settings" class="setup-button cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
     
-    <script src="auth.js"></script>
+    <script src="auth.js"></script></script>
     <script src="freeagent-api.js"></script>
     <script src="popup.js"></script>
 </body>
