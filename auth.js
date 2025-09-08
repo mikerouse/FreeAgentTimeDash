@@ -81,67 +81,56 @@ class FreeAgentAuth {
 
 	/**
 	 * Exchanges authorization code for access and refresh tokens
-	 * Note: This typically requires client_secret, which shouldn't be in the extension.
-	 * You have three options:
-	 * 1. Use a backend proxy server to handle this exchange
-	 * 2. Configure FreeAgent app as a "public" client (if supported)
-	 * 3. Use PKCE flow (if FreeAgent supports it)
+	 * Uses a proxy server to securely handle the client_secret
 	 */
 	async exchangeCodeForTokens(code) {
-		// IMPORTANT: This is where you need to make a decision based on FreeAgent's OAuth support
+		// Use proxy server for secure token exchange
+		// The proxy URL can be configured based on environment
+		const PROXY_URL = this.getProxyUrl();
 		
-		// Option A: If FreeAgent supports public clients (no client_secret required)
-		const params = new URLSearchParams({
-			grant_type: 'authorization_code',
-			client_id: this.CLIENT_ID,
-			code: code,
-			redirect_uri: this.REDIRECT_URL
-		});
+		try {
+			const response = await fetch(`${PROXY_URL}/api/freeagent/token`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					code: code,
+					redirect_uri: this.REDIRECT_URL
+				})
+			});
 
-		// Option B: If you have a backend proxy server
-		// return this.exchangeCodeViaProxy(code);
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(`Token exchange failed: ${errorData.error || 'Unknown error'}`);
+			}
 
-		// Option C: If FreeAgent requires client_secret (NOT SECURE for extension)
-		// You would need to implement a backend service for this
-
-		const response = await fetch(this.TOKEN_URL, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded',
-			},
-			body: params
-		});
-
-		if (!response.ok) {
-			const errorText = await response.text();
-			throw new Error(`Token exchange failed: ${errorText}`);
+			return await response.json();
+		} catch (error) {
+			console.error('Token exchange error:', error);
+			throw error;
 		}
-
-		return await response.json();
 	}
-
+	
 	/**
-	 * Alternative: Exchange code via your backend proxy
+	 * Gets the proxy server URL
+	 * Can be configured for local development or production
 	 */
-	async exchangeCodeViaProxy(code) {
-		// This would call YOUR backend server, not FreeAgent directly
-		const response = await fetch('https://your-backend.com/api/freeagent/token', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify({
-				code: code,
-				redirect_uri: this.REDIRECT_URL
-			})
-		});
-
-		if (!response.ok) {
-			throw new Error('Token exchange via proxy failed');
+	getProxyUrl() {
+		// For local development
+		if (chrome.runtime.id === 'development-extension-id') {
+			return 'http://localhost:3000';
 		}
-
-		return await response.json();
+		
+		// For production - replace with your deployed proxy URL
+		// Options for hosting:
+		// - Vercel: https://your-app.vercel.app
+		// - Netlify Functions: https://your-app.netlify.app
+		// - Heroku: https://your-app.herokuapp.com
+		// - AWS Lambda: https://your-api.execute-api.region.amazonaws.com
+		return 'http://localhost:3000'; // Change this to your production URL
 	}
+
 
 	/**
 	 * Stores tokens securely in Chrome storage
@@ -185,31 +174,33 @@ class FreeAgentAuth {
 			throw new Error('No refresh token available');
 		}
 
-		// Again, this typically requires client_secret
-		// You might need to use your backend proxy for this
-		const params = new URLSearchParams({
-			grant_type: 'refresh_token',
-			client_id: this.CLIENT_ID,
-			refresh_token: this.tokens.refresh_token
-		});
+		const PROXY_URL = this.getProxyUrl();
+		
+		try {
+			const response = await fetch(`${PROXY_URL}/api/freeagent/refresh`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					refresh_token: this.tokens.refresh_token
+				})
+			});
 
-		const response = await fetch(this.TOKEN_URL, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded',
-			},
-			body: params
-		});
+			if (!response.ok) {
+				// Refresh failed, need to re-authenticate
+				await chrome.storage.local.remove(['freeagentTokens', 'freeagentConnected']);
+				throw new Error('Token refresh failed, please re-authenticate');
+			}
 
-		if (!response.ok) {
-			// Refresh failed, need to re-authenticate
+			const newTokens = await response.json();
+			await this.storeTokens(newTokens);
+			return this.tokens;
+		} catch (error) {
+			console.error('Token refresh error:', error);
 			await chrome.storage.local.remove(['freeagentTokens', 'freeagentConnected']);
 			throw new Error('Token refresh failed, please re-authenticate');
 		}
-
-		const newTokens = await response.json();
-		await this.storeTokens(newTokens);
-		return this.tokens;
 	}
 
 	/**
