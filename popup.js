@@ -20,7 +20,20 @@ class TimeTracker {
         const setupContainer = document.getElementById('setup-container');
         const mainContainer = document.getElementById('main-container');
         const configPanel = document.getElementById('config-panel');
-        const taskModal = document.getElementById('task-modal');
+        
+        // Hide all legacy modal elements that might still exist
+        const modalElements = [
+            'config-modal', 
+            'task-modal'
+        ];
+        
+        modalElements.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
+        });
         
         if (setupContainer) {
             setupContainer.classList.add('hidden');
@@ -30,10 +43,29 @@ class TimeTracker {
             configPanel.classList.remove('show');
             configPanel.classList.add('hidden');
         }
-        if (taskModal) {
-            taskModal.classList.add('hidden');
-            taskModal.style.display = 'none';
+        // Close all panels instead of just hiding modals (safe calls)
+        try {
+            this.closeSettingsPanel();
+        } catch (e) {
+            // Panel methods might not be ready during init
+            const settingsPanel = document.getElementById('settings-panel');
+            if (settingsPanel) {
+                settingsPanel.classList.remove('show');
+                settingsPanel.classList.add('hidden');
+            }
         }
+        
+        try {
+            this.closeTimeslipPanel();
+        } catch (e) {
+            // Panel methods might not be ready during init
+            const timeslipPanel = document.getElementById('timeslip-panel');
+            if (timeslipPanel) {
+                timeslipPanel.classList.remove('show');
+                timeslipPanel.classList.add('hidden');
+            }
+        }
+        
         if (mainContainer) {
             mainContainer.classList.remove('hidden');
             mainContainer.style.display = 'block';
@@ -179,25 +211,39 @@ class TimeTracker {
             this.onClientSelected(e.target.value);
         });
 
-        // Task modal events
-        document.getElementById('close-task')?.addEventListener('click', () => this.closeTaskModal());
-        document.getElementById('cancel-task')?.addEventListener('click', () => this.closeTaskModal());
+        // Timeslip panel events (replacing modal)
+        document.getElementById('close-timeslip')?.addEventListener('click', () => this.closeTimeslipPanel());
+        document.getElementById('cancel-timeslip')?.addEventListener('click', () => this.closeTimeslipPanel());
+        document.getElementById('create-timeslip-panel')?.addEventListener('click', () => this.createTimeslipFromPanel());
+        document.getElementById('save-draft-panel')?.addEventListener('click', () => this.saveDraftFromPanel());
+
+        // Time rounding change event (updated IDs)
+        document.getElementById('timeslip-time-rounding')?.addEventListener('change', () => this.updateTimeslipTimeRounding());
+
+        // Work date change event (updated IDs)
+        document.getElementById('timeslip-work-date')?.addEventListener('change', () => this.onTimeslipWorkDateChanged());
+
+        // Task modal events (DEPRECATED - for compatibility)
+        document.getElementById('close-task')?.addEventListener('click', () => this.closeTimeslipPanel());
+        document.getElementById('cancel-task')?.addEventListener('click', () => this.closeTimeslipPanel());
         document.getElementById('create-timeslip')?.addEventListener('click', () => this.createTimeslip());
         document.getElementById('save-draft')?.addEventListener('click', () => this.saveDraft());
+        document.getElementById('use-timeslip-panel')?.addEventListener('click', () => {
+            this.closeTimeslipPanel();
+            this.openTimeslipPanel();
+        });
 
-        // Time rounding change event
+        // Legacy time rounding events (for modal compatibility)
         document.getElementById('time-rounding')?.addEventListener('change', () => this.updateTimeRounding());
-
-        // Work date change event
         document.getElementById('task-work-date')?.addEventListener('change', () => this.onWorkDateChanged());
 
         // Drafts section events
         document.getElementById('toggle-drafts')?.addEventListener('click', () => this.toggleDrafts());
 
-        // Settings events
-        document.getElementById('settings-btn')?.addEventListener('click', () => this.openSettings());
-        document.getElementById('close-settings')?.addEventListener('click', () => this.closeSettings());
-        document.getElementById('cancel-settings')?.addEventListener('click', () => this.closeSettings());
+        // Settings events (using slide-down panel instead of modal)
+        document.getElementById('settings-btn')?.addEventListener('click', () => this.openSettingsPanel());
+        document.getElementById('close-settings')?.addEventListener('click', () => this.closeSettingsPanel());
+        document.getElementById('cancel-settings')?.addEventListener('click', () => this.closeSettingsPanel());
         document.getElementById('save-settings')?.addEventListener('click', () => this.saveSettings());
         document.getElementById('reset-settings')?.addEventListener('click', () => this.resetSettings());
 
@@ -539,9 +585,9 @@ class TimeTracker {
             mainContainer.style.display = 'none';
         }
         
-        // Hide other modals
-        document.getElementById('config-modal').classList.add('hidden');
-        document.getElementById('task-modal').classList.add('hidden');
+        // Hide other panels
+        this.closeConfigPanel();
+        this.closeTimeslipPanel();
     }
 
     updateSyncStatus() {
@@ -829,25 +875,264 @@ class TimeTracker {
         this.updateDisplay();
         this.notifyBackgroundScript(timerId);
 
-        // Show modal with enhanced UI
-        document.getElementById('task-project-name').textContent = `${client.name} - ${client.project.name}`;
-        document.getElementById('task-time-actual').textContent = this.formatTimeDecimal(this.pendingTimeslip.hours);
+        // Show the new slide-down timeslip panel (replaces modal)
+        await this.openTimeslipPanel();
+    }
+
+    // New panel-based timeslip creation (preferred approach)
+    async openTimeslipPanel() {
+        if (!this.pendingTimeslip) {
+            console.error('No pending timeslip data');
+            return;
+        }
+
+        // Close any other open panels
+        this.closeConfigPanel();
+        this.closeSettingsPanel();
+
+        const panel = document.getElementById('timeslip-panel');
+
+        // Populate panel with timeslip data
+        document.getElementById('timeslip-project-name').textContent = 
+            `${this.pendingTimeslip.clientName} - ${this.pendingTimeslip.projectName}`;
+        document.getElementById('timeslip-time-actual').textContent = 
+            this.formatTimeDecimal(this.pendingTimeslip.hours);
         
         // Set today as default work date
         const today = new Date().toISOString().split('T')[0];
-        document.getElementById('task-work-date').value = today;
+        document.getElementById('timeslip-work-date').value = today;
         
         // Load user's default rounding preference
         const result = await chrome.storage.local.get(['timeTrackingSettings']);
         const settings = result.timeTrackingSettings || this.getDefaultSettings();
-        document.getElementById('time-rounding').value = settings.defaultRounding;
+        document.getElementById('timeslip-time-rounding').value = settings.defaultRounding;
         
         // Initialize time rounding display
-        await this.updateTimeRounding();
+        await this.updateTimeslipTimeRounding();
         
-        document.getElementById('task-modal').classList.remove('hidden');
+        // Show panel with slide-down animation
+        panel.classList.remove('hidden');
+        setTimeout(() => panel.classList.add('show'), 10);
         
-        await this.loadTasksForSelection();
+        await this.loadTasksForTimeslipPanel();
+    }
+
+    closeTimeslipPanel() {
+        const panel = document.getElementById('timeslip-panel');
+        panel.classList.remove('show');
+        setTimeout(() => panel.classList.add('hidden'), 300);
+        
+        // Clear pending timeslip data
+        this.pendingTimeslip = null;
+    }
+
+    async updateTimeslipTimeRounding() {
+        if (!this.pendingTimeslip) return;
+        
+        const roundingSelect = document.getElementById('timeslip-time-rounding');
+        const roundingMinutes = parseInt(roundingSelect.value);
+        
+        // Get user's rounding method preference
+        const result = await chrome.storage.local.get(['timeTrackingSettings']);
+        const settings = result.timeTrackingSettings || this.getDefaultSettings();
+        
+        // Calculate rounded time using appropriate method
+        let roundedHours;
+        if (settings.roundingMethod === 'up') {
+            roundedHours = this.freeagentAPI.roundTimeUp(this.pendingTimeslip.hours, roundingMinutes);
+        } else {
+            roundedHours = this.freeagentAPI.roundTime(this.pendingTimeslip.hours, roundingMinutes);
+        }
+        
+        // Update display
+        const roundedTimeElement = document.getElementById('timeslip-time-rounded');
+        roundedTimeElement.textContent = this.formatTimeDecimal(roundedHours);
+        
+        // Store the rounded time for submission
+        this.pendingTimeslip.roundedHours = roundedHours;
+        this.pendingTimeslip.roundingMinutes = roundingMinutes;
+        
+        // Show time difference if significant
+        const timeDiff = Math.abs(roundedHours - this.pendingTimeslip.hours);
+        if (timeDiff > 0.01) {
+            const diffText = roundedHours > this.pendingTimeslip.hours ? '+' : '';
+            roundedTimeElement.title = `${diffText}${this.formatTimeDecimal(timeDiff)} difference from actual time`;
+            roundedTimeElement.style.fontWeight = 'bold';
+        } else {
+            roundedTimeElement.title = 'No rounding applied';
+            roundedTimeElement.style.fontWeight = 'normal';
+        }
+    }
+
+    onTimeslipWorkDateChanged() {
+        const dateInput = document.getElementById('timeslip-work-date');
+        const selectedDate = new Date(dateInput.value);
+        const today = new Date();
+        
+        if (selectedDate > today) {
+            alert('Work date cannot be in the future.');
+            dateInput.value = today.toISOString().split('T')[0];
+        }
+    }
+
+    async loadTasksForTimeslipPanel() {
+        const taskSelect = document.getElementById('timeslip-task-select');
+        const errorEl = document.getElementById('timeslip-error');
+        
+        try {
+            taskSelect.innerHTML = '<option value="">Loading tasks...</option>';
+            errorEl.classList.add('hidden');
+
+            const tasks = await this.freeagentAPI.getTasksForProjectWithDefault(this.pendingTimeslip.projectUrl);
+            
+            taskSelect.innerHTML = '<option value="">Select Task...</option>';
+            
+            tasks.forEach(task => {
+                const option = document.createElement('option');
+                option.value = task.url;
+                option.textContent = task.name;
+                option.title = `${task.name}${task.is_billable ? ' (Billable)' : ' (Non-billable)'}`;
+                taskSelect.appendChild(option);
+            });
+
+            if (tasks.length === 0) {
+                const option = document.createElement('option');
+                option.value = 'CREATE_DEFAULT';
+                option.textContent = 'Create Default Task';
+                taskSelect.appendChild(option);
+            }
+
+            console.log(`Loaded ${tasks.length} tasks for timeslip panel`);
+
+        } catch (error) {
+            console.error('Error loading tasks for panel:', error);
+            errorEl.textContent = `Failed to load tasks: ${error.message}`;
+            errorEl.classList.remove('hidden');
+            
+            taskSelect.innerHTML = '<option value="">Error loading tasks</option>';
+        }
+    }
+
+    async createTimeslipFromPanel() {
+        const taskSelect = document.getElementById('timeslip-task-select');
+        const commentInput = document.getElementById('timeslip-comment');
+        const workDateInput = document.getElementById('timeslip-work-date');
+        const roundingSelect = document.getElementById('timeslip-time-rounding');
+        const errorEl = document.getElementById('timeslip-error');
+        const createBtn = document.getElementById('create-timeslip-panel');
+        
+        if (!taskSelect.value) {
+            errorEl.textContent = 'Please select a task';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            createBtn.textContent = 'Creating...';
+            createBtn.disabled = true;
+            errorEl.classList.add('hidden');
+
+            let taskUrl = taskSelect.value;
+            
+            // Handle default task creation
+            if (taskUrl === 'CREATE_DEFAULT') {
+                const newTask = await this.freeagentAPI.createDefaultTask(this.pendingTimeslip.projectUrl);
+                taskUrl = newTask.url;
+            }
+
+            // Get form values
+            const comment = commentInput.value || `Timer ${this.pendingTimeslip.timerId}: ${this.pendingTimeslip.clientName}`;
+            const workDate = workDateInput.value;
+            const roundingMinutes = parseInt(roundingSelect.value);
+            const hoursToSubmit = this.pendingTimeslip.roundedHours || this.pendingTimeslip.hours;
+            
+            // Create the timeslip with time rounding and custom date
+            await this.freeagentAPI.createTimeslip(
+                this.pendingTimeslip.projectUrl,
+                taskUrl,
+                hoursToSubmit,
+                comment,
+                workDate,
+                roundingMinutes
+            );
+
+            // Reset the timer's elapsed time since it's now logged
+            this.timers[this.pendingTimeslip.timerId].elapsed = 0;
+            await this.saveData();
+            this.updateDisplay();
+
+            this.closeTimeslipPanel();
+            
+            // Show success notification with details
+            const timeMsg = roundingMinutes > 0 ? 
+                `${this.formatTimeDecimal(hoursToSubmit)} hours (rounded from ${this.formatTimeDecimal(this.pendingTimeslip.hours)})` :
+                `${this.formatTimeDecimal(hoursToSubmit)} hours`;
+            this.showNotification(`✅ Timeslip created: ${timeMsg}`);
+
+        } catch (error) {
+            console.error('Error creating timeslip from panel:', error);
+            errorEl.textContent = 'Failed to create timeslip: ' + error.message;
+            errorEl.classList.remove('hidden');
+        } finally {
+            createBtn.textContent = 'Create Timeslip';
+            createBtn.disabled = false;
+        }
+    }
+
+    async saveDraftFromPanel() {
+        const taskSelect = document.getElementById('timeslip-task-select');
+        const commentInput = document.getElementById('timeslip-comment');
+        const workDateInput = document.getElementById('timeslip-work-date');
+        const roundingSelect = document.getElementById('timeslip-time-rounding');
+        
+        if (!taskSelect.value) {
+            alert('Please select a task before saving draft');
+            return;
+        }
+
+        try {
+            // Save draft to Chrome storage
+            const draftData = {
+                projectUrl: this.pendingTimeslip.projectUrl,
+                projectName: this.pendingTimeslip.projectName,
+                clientName: this.pendingTimeslip.clientName,
+                taskUrl: taskSelect.value,
+                taskName: taskSelect.options[taskSelect.selectedIndex].text,
+                actualHours: this.pendingTimeslip.hours,
+                roundedHours: this.pendingTimeslip.roundedHours || this.pendingTimeslip.hours,
+                comment: commentInput.value,
+                workDate: workDateInput.value,
+                roundingMinutes: parseInt(roundingSelect.value),
+                savedAt: new Date().toISOString(),
+                timerId: this.pendingTimeslip.timerId
+            };
+
+            // Get existing drafts
+            const result = await chrome.storage.local.get(['timeslipDrafts']);
+            const drafts = result.timeslipDrafts || [];
+            
+            // Add new draft
+            drafts.push(draftData);
+            
+            // Keep only last 10 drafts
+            if (drafts.length > 10) {
+                drafts.splice(0, drafts.length - 10);
+            }
+            
+            await chrome.storage.local.set({ timeslipDrafts: drafts });
+            
+            // Reset the timer's elapsed time since it's saved as draft
+            this.timers[this.pendingTimeslip.timerId].elapsed = 0;
+            await this.saveData();
+            this.updateDisplay();
+            
+            this.closeTimeslipPanel();
+            this.showNotification(`💾 Draft saved: ${this.formatTimeDecimal(draftData.roundedHours)} hours`);
+            
+        } catch (error) {
+            console.error('Error saving draft from panel:', error);
+            alert('Failed to save draft: ' + error.message);
+        }
     }
 
     async updateTimeRounding() {
@@ -947,7 +1232,7 @@ class TimeTracker {
             await this.saveData();
             this.updateDisplay();
             
-            this.closeTaskModal();
+            this.closeTimeslipPanel();
             this.showNotification(`💾 Draft saved: ${this.formatTimeDecimal(draftData.roundedHours)} hours`);
             
         } catch (error) {
@@ -1004,11 +1289,6 @@ class TimeTracker {
         }
     }
 
-    closeTaskModal() {
-        document.getElementById('task-modal').classList.add('hidden');
-        this.pendingTimeslip = null;
-    }
-
     async createTimeslip() {
         const taskSelect = document.getElementById('task-select');
         const commentInput = document.getElementById('task-comment');
@@ -1057,7 +1337,7 @@ class TimeTracker {
             await this.saveData();
             this.updateDisplay();
 
-            this.closeTaskModal();
+            this.closeTimeslipPanel();
             
             // Show success notification with details
             const timeMsg = roundingMinutes > 0 ? 
@@ -1223,8 +1503,11 @@ class TimeTracker {
         }
     }
 
-    async openSettings() {
-        const modal = document.getElementById('settings-modal');
+    async openSettingsPanel() {
+        // Close any other open panels
+        this.closeConfigPanel();
+        
+        const panel = document.getElementById('settings-panel');
         
         // Load current settings
         const result = await chrome.storage.local.get(['timeTrackingSettings']);
@@ -1236,11 +1519,15 @@ class TimeTracker {
         document.getElementById('auto-save-drafts').checked = settings.autoSaveDrafts;
         document.getElementById('max-drafts').value = settings.maxDrafts;
         
-        modal.classList.remove('hidden');
+        // Show panel with slide-down animation
+        panel.classList.remove('hidden');
+        setTimeout(() => panel.classList.add('show'), 10);
     }
 
-    closeSettings() {
-        document.getElementById('settings-modal').classList.add('hidden');
+    closeSettingsPanel() {
+        const panel = document.getElementById('settings-panel');
+        panel.classList.remove('show');
+        setTimeout(() => panel.classList.add('hidden'), 300);
     }
 
     async saveSettings() {
@@ -1253,7 +1540,7 @@ class TimeTracker {
             };
 
             await chrome.storage.local.set({ timeTrackingSettings: settings });
-            this.closeSettings();
+            this.closeSettingsPanel();
             this.showNotification('⚙️ Settings saved');
             
         } catch (error) {

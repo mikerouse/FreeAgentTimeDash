@@ -498,6 +498,66 @@
         .modal-content {
             background: white;
             border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #495057;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6c757d;
+            padding: 0;
+            line-height: 1;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: #000;
+            background: #e9ecef;
+            border-radius: 50%;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            padding: 15px 20px;
+            border-top: 1px solid #e9ecef;
+            background: #f8f9fa;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
             width: 450px;
             max-width: 90vw;
             max-height: 80vh;
@@ -749,7 +809,66 @@
         </button>
     </div>
 
-    <!-- Task Selection Modal -->
+    <!-- Timeslip Creation Panel (slide-down, replaces modal) -->
+    <div id="timeslip-panel" class="config-panel hidden">
+        <div class="config-header">
+            <h3>Create Timeslip</h3>
+            <button id="close-timeslip" class="close-btn">&times;</button>
+        </div>
+        <div class="config-content">
+            <div id="timeslip-info" class="timeslip-info">
+                <div class="info-row">
+                    <label>Project:</label>
+                    <span id="timeslip-project-name" class="info-value"></span>
+                </div>
+                <div class="info-row">
+                    <label>Actual Time:</label>
+                    <span id="timeslip-time-actual" class="info-value time-display"></span>
+                </div>
+                <div class="info-row">
+                    <label>Rounded Time:</label>
+                    <span id="timeslip-time-rounded" class="info-value time-display-rounded"></span>
+                </div>
+                <div class="info-row">
+                    <label>Work Date:</label>
+                    <input type="date" id="timeslip-work-date" class="date-input">
+                </div>
+            </div>
+            
+            <div class="config-row">
+                <label>Time Rounding:</label>
+                <select id="timeslip-time-rounding" class="rounding-select">
+                    <option value="0">No rounding (exact time)</option>
+                    <option value="15">15 minutes</option>
+                    <option value="30" selected>30 minutes (default)</option>
+                    <option value="60">1 hour</option>
+                </select>
+                <small class="rounding-hint">Professional time tracking typically uses 30-minute intervals</small>
+            </div>
+            
+            <div class="config-row">
+                <label>Task:</label>
+                <select id="timeslip-task-select" class="task-select">
+                    <option value="">Loading tasks...</option>
+                </select>
+            </div>
+            
+            <div class="config-row">
+                <label>Comment:</label>
+                <textarea id="timeslip-comment" placeholder="Describe what you worked on..." rows="3"></textarea>
+                <small class="comment-hint">Detailed comments help with invoicing and project tracking</small>
+            </div>
+            
+            <div id="timeslip-error" class="error hidden"></div>
+        </div>
+        <div class="config-actions">
+            <button id="create-timeslip-panel" class="config-button save">Create Timeslip</button>
+            <button id="save-draft-panel" class="config-button" style="background: #6c757d; color: white;">Save Draft</button>
+            <button id="cancel-timeslip" class="config-button cancel">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Task Selection Modal (DEPRECATED - keeping temporarily for compatibility) -->
     <div id="task-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
@@ -757,104 +876,57 @@
                 <button id="close-task" class="close-btn">&times;</button>
             </div>
             <div class="modal-body">
-                <div id="task-info" class="timeslip-info">
-                    <div class="info-row">
-                        <label>Project:</label>
-                        <span id="task-project-name" class="info-value"></span>
-                    </div>
-                    <div class="info-row">
-                        <label>Actual Time:</label>
-                        <span id="task-time-actual" class="info-value time-display"></span>
-                    </div>
-                    <div class="info-row">
-                        <label>Rounded Time:</label>
-                        <span id="task-time-rounded" class="info-value time-display-rounded"></span>
-                    </div>
-                    <div class="info-row">
-                        <label>Work Date:</label>
-                        <input type="date" id="task-work-date" class="date-input">
-                    </div>
-                </div>
-                
-                <div class="config-row">
-                    <label>Time Rounding:</label>
-                    <select id="time-rounding" class="rounding-select">
-                        <option value="0">No rounding (exact time)</option>
-                        <option value="15">15 minutes</option>
-                        <option value="30" selected>30 minutes (default)</option>
-                        <option value="60">1 hour</option>
-                    </select>
-                    <small class="rounding-hint">Professional time tracking typically uses 30-minute intervals</small>
-                </div>
-                
-                <div class="config-row">
-                    <label>Task:</label>
-                    <select id="task-select" class="task-select">
-                        <option value="">Loading tasks...</option>
-                    </select>
-                </div>
-                
-                <div class="config-row">
-                    <label>Comment:</label>
-                    <textarea id="task-comment" placeholder="Describe what you worked on..." rows="3"></textarea>
-                    <small class="comment-hint">Detailed comments help with invoicing and project tracking</small>
-                </div>
-                
-                <div id="task-error" class="error hidden"></div>
+                <p style="color: #dc3545; font-weight: bold;">⚠️ This modal interface is deprecated. Please use the slide-down timeslip panel instead.</p>
             </div>
             <div class="modal-footer">
-                <button id="create-timeslip" class="setup-button primary">Create Timeslip</button>
-                <button id="save-draft" class="setup-button secondary">Save Draft</button>
-                <button id="cancel-task" class="setup-button cancel">Cancel</button>
+                <button id="use-timeslip-panel" class="setup-button primary">Use Timeslip Panel Instead</button>
             </div>
         </div>
     </div>
 
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>⚙️ Time Tracking Settings</h3>
-                <button id="close-settings" class="close-btn">&times;</button>
+    <!-- Settings Panel (slide-down, no modal) -->
+    <div id="settings-panel" class="config-panel hidden">
+        <div class="config-header">
+            <h3>⚙️ Time Tracking Settings</h3>
+            <button id="close-settings" class="close-btn">&times;</button>
+        </div>
+        <div class="config-content">
+            <div class="config-row">
+                <label>Default Time Rounding:</label>
+                <select id="default-rounding" class="rounding-select">
+                    <option value="0">No rounding (exact time)</option>
+                    <option value="15">15 minutes</option>
+                    <option value="30" selected>30 minutes</option>
+                    <option value="60">1 hour</option>
+                </select>
+                <small class="rounding-hint">This will be the default selection when creating timeslips</small>
             </div>
-            <div class="modal-body">
-                <div class="config-row">
-                    <label>Default Time Rounding:</label>
-                    <select id="default-rounding" class="rounding-select">
-                        <option value="0">No rounding (exact time)</option>
-                        <option value="15">15 minutes</option>
-                        <option value="30" selected>30 minutes</option>
-                        <option value="60">1 hour</option>
-                    </select>
-                    <small class="rounding-hint">This will be the default selection when creating timeslips</small>
-                </div>
-                
-                <div class="config-row">
-                    <label>Rounding Method:</label>
-                    <select id="rounding-method" class="rounding-select">
-                        <option value="round">Round to nearest (up or down)</option>
-                        <option value="up">Always round up (never bill less)</option>
-                    </select>
-                    <small class="rounding-hint">Choose how time intervals are rounded</small>
-                </div>
-                
-                <div class="config-row">
-                    <label>Auto-save drafts:</label>
-                    <input type="checkbox" id="auto-save-drafts" checked>
-                    <small class="rounding-hint">Automatically save draft when timer stops</small>
-                </div>
-                
-                <div class="config-row">
-                    <label>Max drafts to keep:</label>
-                    <input type="number" id="max-drafts" value="10" min="1" max="50" style="width: 80px;">
-                    <small class="rounding-hint">Maximum number of drafts to store</small>
-                </div>
+            
+            <div class="config-row">
+                <label>Rounding Method:</label>
+                <select id="rounding-method" class="rounding-select">
+                    <option value="round">Round to nearest (up or down)</option>
+                    <option value="up">Always round up (never bill less)</option>
+                </select>
+                <small class="rounding-hint">Choose how time intervals are rounded</small>
             </div>
-            <div class="modal-footer">
-                <button id="save-settings" class="setup-button primary">Save Settings</button>
-                <button id="reset-settings" class="setup-button secondary">Reset to Defaults</button>
-                <button id="cancel-settings" class="setup-button cancel">Cancel</button>
+            
+            <div class="config-row">
+                <label>Auto-save drafts:</label>
+                <input type="checkbox" id="auto-save-drafts" checked>
+                <small class="rounding-hint">Automatically save draft when timer stops</small>
             </div>
+            
+            <div class="config-row">
+                <label>Max drafts to keep:</label>
+                <input type="number" id="max-drafts" value="10" min="1" max="50" style="width: 80px;">
+                <small class="rounding-hint">Maximum number of drafts to store</small>
+            </div>
+        </div>
+        <div class="config-actions">
+            <button id="save-settings" class="config-button save">Save Settings</button>
+            <button id="reset-settings" class="config-button" style="background: #6c757d; color: white;">Reset to Defaults</button>
+            <button id="cancel-settings" class="config-button cancel">Cancel</button>
         </div>
     </div>
     
