@@ -140,7 +140,6 @@ class TimeTracker {
         const connectBtn = document.getElementById('connect-btn');
         const skipBtn = document.getElementById('skip-setup');
         const setupBtn = document.getElementById('setup-btn');
-        const configBtn = document.getElementById('config-btn');
         
         if (connectBtn) connectBtn.addEventListener('click', () => this.connectFreeAgent());
         if (skipBtn) skipBtn.addEventListener('click', () => this.skipSetup());
@@ -153,14 +152,19 @@ class TimeTracker {
         } else {
             console.log('Setup button not found!');
         }
-        if (configBtn) {
-            console.log('Config button found, adding event listener');
-            configBtn.addEventListener('click', () => {
-                console.log('Config button clicked');
-                this.showConfigModal();
-            });
-        } else {
-            console.log('Config button not found!');
+        
+        // Individual timer config buttons
+        for (let i = 1; i <= 3; i++) {
+            const configBtn = document.getElementById(`config-timer-${i}`);
+            if (configBtn) {
+                console.log(`Config button for timer ${i} found, adding event listener`);
+                configBtn.addEventListener('click', () => {
+                    console.log(`Config button for timer ${i} clicked`);
+                    this.showConfigModal(i);
+                });
+            } else {
+                console.log(`Config button for timer ${i} not found!`);
+            }
         }
 
         // Configuration modal events
@@ -485,9 +489,8 @@ class TimeTracker {
 
     skipSetup() {
         console.log('Skipping setup, returning to timers');
+        this.hideAllModalsAndSetup();
         localStorage.setItem('setupSkipped', 'true');
-        document.getElementById('setup-container').classList.add('hidden');
-        document.getElementById('main-container').style.display = 'block';
     }
 
     showSetup() {
@@ -530,15 +533,23 @@ class TimeTracker {
     }
 
     // Configuration Modal Methods
-    async showConfigModal() {
+    async showConfigModal(timerId = 1) {
         // Prevent showing config modal during initialization
         if (this.isInitializing) {
             console.log('Preventing config modal during initialization');
             return;
         }
         
-        // Always show config modal, but warn if not connected
-        console.log('Showing configuration modal');
+        console.log(`Showing configuration modal for timer ${timerId}`);
+        this.currentConfigTimer = timerId;
+        
+        // Update modal title and timer name
+        document.getElementById('config-modal-title').textContent = `Configure Timer ${timerId}`;
+        document.getElementById('config-timer-name').textContent = `Timer ${timerId} - ${this.clients[timerId].name}`;
+        
+        // Set current values
+        document.getElementById('color-select-current').value = this.clients[timerId].color;
+        
         document.getElementById('config-modal').classList.remove('hidden');
         
         if (!this.freeagentConnected) {
@@ -548,6 +559,9 @@ class TimeTracker {
                 errorEl.textContent = 'Not connected to FreeAgent. Connect first to sync with projects.';
                 errorEl.classList.remove('hidden');
             }
+            // Show the config form anyway for color selection
+            document.getElementById('timer-config-single').classList.remove('hidden');
+            document.getElementById('loading-projects').classList.add('hidden');
             return;
         }
 
@@ -573,12 +587,12 @@ class TimeTracker {
     async loadProjectsForConfiguration() {
         const loadingEl = document.getElementById('loading-projects');
         const errorEl = document.getElementById('config-error');
-        const configsEl = document.getElementById('timer-configs');
+        const configEl = document.getElementById('timer-config-single');
 
         try {
             loadingEl.classList.remove('hidden');
             errorEl.classList.add('hidden');
-            configsEl.classList.add('hidden');
+            configEl.classList.add('hidden');
 
             // Initialize API if needed
             if (!this.freeagentAPI.isReady()) {
@@ -587,46 +601,43 @@ class TimeTracker {
 
             const projects = await this.freeagentAPI.getProjects();
             
-            // Populate project dropdowns
-            for (let timerId = 1; timerId <= 3; timerId++) {
-                const select = document.getElementById(`project-select-${timerId}`);
-                const colorInput = document.getElementById(`color-select-${timerId}`);
+            // Populate project dropdown for current timer
+            const select = document.getElementById('project-select-current');
+            
+            // Clear existing options
+            select.innerHTML = '<option value="">Select Project...</option>';
+            
+            // Add projects grouped by client
+            for (const [clientName, clientProjects] of Object.entries(projects)) {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = clientName;
                 
-                // Clear existing options
-                select.innerHTML = '<option value="">Select Project...</option>';
+                clientProjects.forEach(project => {
+                    const option = document.createElement('option');
+                    option.value = project.url;
+                    option.textContent = project.name;
+                    option.dataset.clientName = project.contact_name;
+                    option.dataset.projectName = project.name;
+                    
+                    // Check if this project is currently selected for this timer
+                    if (this.clients[this.currentConfigTimer].project && 
+                        this.clients[this.currentConfigTimer].project.url === project.url) {
+                        option.selected = true;
+                    }
+                    
+                    optgroup.appendChild(option);
+                });
                 
-                // Add projects grouped by client
-                for (const [clientName, clientProjects] of Object.entries(projects)) {
-                    const optgroup = document.createElement('optgroup');
-                    optgroup.label = clientName;
-                    
-                    clientProjects.forEach(project => {
-                        const option = document.createElement('option');
-                        option.value = project.url;
-                        option.textContent = project.name;
-                        option.dataset.clientName = project.contact_name;
-                        option.dataset.projectName = project.name;
-                        optgroup.appendChild(option);
-                    });
-                    
-                    select.appendChild(optgroup);
-                }
-
-                // Set current values
-                const client = this.clients[timerId];
-                if (client.project) {
-                    select.value = client.project.url;
-                }
-                colorInput.value = client.color;
+                select.appendChild(optgroup);
             }
 
             loadingEl.classList.add('hidden');
-            configsEl.classList.remove('hidden');
-
+            configEl.classList.remove('hidden');
+            
         } catch (error) {
             console.error('Error loading projects:', error);
             loadingEl.classList.add('hidden');
-            errorEl.textContent = 'Failed to load projects: ' + error.message;
+            errorEl.textContent = 'Failed to load projects. Please try again.';
             errorEl.classList.remove('hidden');
         }
     }
@@ -650,38 +661,41 @@ class TimeTracker {
 
     async saveConfiguration() {
         try {
-            // Update client configurations
-            for (let timerId = 1; timerId <= 3; timerId++) {
-                const projectSelect = document.getElementById(`project-select-${timerId}`);
-                const colorInput = document.getElementById(`color-select-${timerId}`);
-                const client = this.clients[timerId];
-                
-                if (projectSelect.value) {
-                    const selectedOption = projectSelect.selectedOptions[0];
-                    client.project = {
-                        url: projectSelect.value,
-                        name: selectedOption.dataset.projectName,
-                        contact_name: selectedOption.dataset.clientName
-                    };
-                    client.name = selectedOption.dataset.clientName;
-                    client.configured = true;
-                } else {
-                    client.project = null;
-                    client.name = `Client ${timerId}`;
-                    client.configured = false;
-                }
-                
-                client.color = colorInput.value;
+            const timerId = this.currentConfigTimer;
+            const projectSelect = document.getElementById('project-select-current');
+            const colorInput = document.getElementById('color-select-current');
+            
+            // Update client configuration
+            this.clients[timerId].color = colorInput.value;
+            
+            if (projectSelect.value) {
+                const selectedOption = projectSelect.selectedOptions[0];
+                this.clients[timerId].project = {
+                    url: selectedOption.value,
+                    name: selectedOption.textContent,
+                    contact_name: selectedOption.dataset.clientName
+                };
+                this.clients[timerId].configured = true;
+                this.clients[timerId].name = selectedOption.dataset.clientName || `Client ${timerId}`;
+            } else {
+                this.clients[timerId].project = null;
+                this.clients[timerId].configured = false;
             }
-
+            
+            // Save to storage
             await this.saveData();
+            
+            // Update display
             this.updateDisplay();
+            this.updateSyncStatus();
+            
+            // Close modal
             this.closeConfigModal();
-            this.showNotification('Configuration saved successfully!');
-
+            
+            console.log(`Configuration saved for timer ${timerId}`);
         } catch (error) {
             console.error('Error saving configuration:', error);
-            this.showNotification('Failed to save configuration: ' + error.message, 'error');
+            this.showNotification('Failed to save configuration', 'error');
         }
     }
 

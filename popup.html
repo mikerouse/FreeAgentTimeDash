@@ -60,6 +60,32 @@
             flex-grow: 1;
         }
         
+        .timer-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .config-timer-btn {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .config-timer-btn:hover {
+            background: #e0e0e0;
+            border-color: #bbb;
+        }
+        
         .client-name {
             font-weight: bold;
             font-size: 16px;
@@ -336,7 +362,10 @@
                 <div class="timer-display" id="timer-1-display">00:00:00</div>
                 <div class="shortcut-hint">Alt+1</div>
             </div>
-            <button class="start-btn" id="timer-1-btn" data-timer="1">Start</button>
+            <div class="timer-controls">
+                <button class="config-timer-btn" id="config-timer-1" data-timer="1" title="Configure Timer 1">⚙️</button>
+                <button class="start-btn" id="timer-1-btn" data-timer="1">Start</button>
+            </div>
         </div>
         
         <div class="timer-tile client-2" data-timer="2">
@@ -345,7 +374,10 @@
                 <div class="timer-display" id="timer-2-display">00:00:00</div>
                 <div class="shortcut-hint">Alt+2</div>
             </div>
-            <button class="start-btn" id="timer-2-btn" data-timer="2">Start</button>
+            <div class="timer-controls">
+                <button class="config-timer-btn" id="config-timer-2" data-timer="2" title="Configure Timer 2">⚙️</button>
+                <button class="start-btn" id="timer-2-btn" data-timer="2">Start</button>
+            </div>
         </div>
         
         <div class="timer-tile client-3" data-timer="3">
@@ -354,7 +386,10 @@
                 <div class="timer-display" id="timer-3-display">00:00:00</div>
                 <div class="shortcut-hint">Alt+3</div>
             </div>
-            <button class="start-btn" id="timer-3-btn" data-timer="3">Start</button>
+            <div class="timer-controls">
+                <button class="config-timer-btn" id="config-timer-3" data-timer="3" title="Configure Timer 3">⚙️</button>
+                <button class="start-btn" id="timer-3-btn" data-timer="3">Start</button>
+            </div>
         </div>
     </div>
     
@@ -366,10 +401,7 @@
             Not connected to FreeAgent
         </div>
         <button id="setup-btn" class="setup-button" style="font-size: 12px; padding: 5px 10px;">
-            Setup
-        </button>
-        <button id="config-btn" class="setup-button" style="font-size: 12px; padding: 5px 10px; background: #4CAF50;">
-            Configure Timers
+            Setup FreeAgent
         </button>
     </div>
 
@@ -377,61 +409,37 @@
     <div id="config-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Configure Timer Projects</h3>
+                <h3 id="config-modal-title">Configure Timer</h3>
                 <button id="close-config" class="close-btn">&times;</button>
             </div>
             <div class="modal-body">
                 <div id="loading-projects" class="loading">Loading projects...</div>
                 <div id="config-error" class="error hidden"></div>
                 
-                <div id="timer-configs" class="hidden">
-                    <!-- Timer 1 Config -->
-                    <div class="timer-config" data-timer="1">
-                        <h4>Timer 1</h4>
+                <div id="timer-config-single" class="hidden">
+                    <div class="timer-config">
+                        <h4 id="config-timer-name">Timer 1</h4>
                         <div class="config-row">
                             <label>Project:</label>
-                            <select id="project-select-1" class="project-select">
+                            <select id="project-select-current" class="project-select">
                                 <option value="">Select Project...</option>
                             </select>
                         </div>
                         <div class="config-row">
                             <label>Color:</label>
-                            <input type="color" id="color-select-1" value="#FF5722">
+                            <input type="color" id="color-select-current" value="#FF5722">
                         </div>
-                        <div class="config-status" id="config-status-1"></div>
+                        <div class="config-status" id="config-status-current"></div>
                     </div>
-
-                    <!-- Timer 2 Config -->
-                    <div class="timer-config" data-timer="2">
-                        <h4>Timer 2</h4>
-                        <div class="config-row">
-                            <label>Project:</label>
-                            <select id="project-select-2" class="project-select">
-                                <option value="">Select Project...</option>
-                            </select>
-                        </div>
-                        <div class="config-row">
-                            <label>Color:</label>
-                            <input type="color" id="color-select-2" value="#2196F3">
-                        </div>
-                        <div class="config-status" id="config-status-2"></div>
+                </div>
                     </div>
-
-                    <!-- Timer 3 Config -->
-                    <div class="timer-config" data-timer="3">
-                        <h4>Timer 3</h4>
-                        <div class="config-row">
-                            <label>Project:</label>
-                            <select id="project-select-3" class="project-select">
-                                <option value="">Select Project...</option>
-                            </select>
-                        </div>
-                        <div class="config-row">
-                            <label>Color:</label>
-                            <input type="color" id="color-select-3" value="#4CAF50">
-                        </div>
-                        <div class="config-status" id="config-status-3"></div>
-                    </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-config" class="setup-button">Save Configuration</button>
+                <button id="cancel-config" class="setup-button" style="background: #666;">Cancel</button>
+            </div>
+        </div>
+    }
                 </div>
             </div>
             <div class="modal-footer">
