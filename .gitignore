@@ -163,6 +163,15 @@ auth.js
 background.js
 content.js
 
+# Backup and development files
+*-backup.js
+*-old.js
+main-simple.js
+preload-simple.js
+*-simple.js
+quick-start.*
+debug.*
+
 # Draft timeslips and temporary data
 drafts/
 temp-timeslips/
