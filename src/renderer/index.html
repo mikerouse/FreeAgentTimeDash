@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,331 +7,78 @@
     <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <h1 class="app-title">Time Tracker</h1>
-                <div class="header-actions">
-                    <button id="settings-btn" class="header-btn" title="Settings">
-                        <span class="icon">⚙️</span>
-                    </button>
-                </div>
-            </div>
-        </header>
+    <header>
+        <h1>🕐 FreeAgent Time Tracker</h1>
+        <div class="app-status">
+            <span class="version" id="app-version">v1.0.0</span>
+        </div>
+    </header>
 
-        <!-- Configuration Panel -->
-        <div id="config-panel" class="slide-panel">
-            <div class="panel-header">
-                <h3 id="config-panel-title">Configure Timer</h3>
-                <button id="close-config-panel" class="close-btn">&times;</button>
+    <main class="timer-container">
+        <div class="timer-tile client-1" data-timer="1">
+            <div class="shortcut-hint">Alt+1</div>
+            <div class="timer-info">
+                <div class="client-name" id="timer-1-name">Client 1</div>
+                <div class="timer-display" id="timer-1-display">00:00:00</div>
+                <div class="timer-status" id="timer-1-status">Ready</div>
             </div>
-            <div class="panel-content">
-                <div id="config-loading" class="loading hidden">Loading projects...</div>
-                <div id="config-error" class="error hidden"></div>
-                
-                <form id="timer-config-form" class="config-form">
-                    <div class="form-group">
-                        <label for="timer-name-input">Timer Name</label>
-                        <input type="text" id="timer-name-input" placeholder="Enter timer name" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="timer-color">Color</label>
-                        <input type="color" id="timer-color" value="#FF5722">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="client-select">Client</label>
-                        <select id="client-select">
-                            <option value="">Select Client...</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group" id="project-group" style="display: none;">
-                        <label for="project-select">Project</label>
-                        <select id="project-select">
-                            <option value="">Select Project...</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Save</button>
-                        <button type="button" id="cancel-config" class="btn btn-secondary">Cancel</button>
-                    </div>
-                </form>
+            <div class="timer-controls">
+                <button class="config-timer-btn" id="config-timer-1" title="Configure Timer 1"></button>
+                <button class="start-btn" id="timer-1-btn">
+                    <span class="btn-icon"></span>
+                    <span class="btn-text">Start</span>
+                </button>
             </div>
         </div>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Setup Container (shown when not configured) -->
-            <div id="setup-container" class="setup-container hidden">
-                <div class="setup-content">
-                    <div class="setup-icon">🔗</div>
-                    <h2>Connect to FreeAgent</h2>
-                    <p>Connect your FreeAgent account to automatically sync time entries and create timeslips.</p>
-                    <div class="setup-actions">
-                        <button id="connect-btn" class="btn btn-primary">Connect FreeAgent</button>
-                        <button id="skip-setup" class="btn btn-outline">Skip for Now</button>
-                    </div>
-                </div>
+        
+        <div class="timer-tile client-2" data-timer="2">
+            <div class="shortcut-hint">Alt+2</div>
+            <div class="timer-info">
+                <div class="client-name" id="timer-2-name">Client 2</div>
+                <div class="timer-display" id="timer-2-display">00:00:00</div>
+                <div class="timer-status" id="timer-2-status">Ready</div>
             </div>
-
-            <!-- Timer Container -->
-            <div id="timer-container" class="timer-container">
-                <div class="timer-grid">
-                    <!-- Timer 1 -->
-                    <div class="timer-card" data-timer="1">
-                        <div class="timer-header">
-                            <div class="timer-info">
-                                <h3 class="timer-name" id="timer-1-name">Client 1</h3>
-                                <div class="timer-project" id="timer-1-project">No project assigned</div>
-                            </div>
-                            <button class="config-btn" id="config-timer-1" data-timer="1" title="Configure Timer">
-                                <span class="icon">⚙️</span>
-                            </button>
-                        </div>
-                        
-                        <div class="timer-display">
-                            <div class="timer-time" id="timer-1-display">00:00:00</div>
-                            <div class="timer-status" id="timer-1-status">Ready</div>
-                        </div>
-                        
-                        <div class="timer-controls">
-                            <button class="timer-btn" id="timer-1-btn" data-timer="1">
-                                <span class="btn-icon">▶️</span>
-                                <span class="btn-text">Start</span>
-                            </button>
-                        </div>
-                        
-                        <div class="timer-shortcut">Alt+1</div>
-                    </div>
-
-                    <!-- Timer 2 -->
-                    <div class="timer-card" data-timer="2">
-                        <div class="timer-header">
-                            <div class="timer-info">
-                                <h3 class="timer-name" id="timer-2-name">Client 2</h3>
-                                <div class="timer-project" id="timer-2-project">No project assigned</div>
-                            </div>
-                            <button class="config-btn" id="config-timer-2" data-timer="2" title="Configure Timer">
-                                <span class="icon">⚙️</span>
-                            </button>
-                        </div>
-                        
-                        <div class="timer-display">
-                            <div class="timer-time" id="timer-2-display">00:00:00</div>
-                            <div class="timer-status" id="timer-2-status">Ready</div>
-                        </div>
-                        
-                        <div class="timer-controls">
-                            <button class="timer-btn" id="timer-2-btn" data-timer="2">
-                                <span class="btn-icon">▶️</span>
-                                <span class="btn-text">Start</span>
-                            </button>
-                        </div>
-                        
-                        <div class="timer-shortcut">Alt+2</div>
-                    </div>
-
-                    <!-- Timer 3 -->
-                    <div class="timer-card" data-timer="3">
-                        <div class="timer-header">
-                            <div class="timer-info">
-                                <h3 class="timer-name" id="timer-3-name">Client 3</h3>
-                                <div class="timer-project" id="timer-3-project">No project assigned</div>
-                            </div>
-                            <button class="config-btn" id="config-timer-3" data-timer="3" title="Configure Timer">
-                                <span class="icon">⚙️</span>
-                            </button>
-                        </div>
-                        
-                        <div class="timer-display">
-                            <div class="timer-time" id="timer-3-display">00:00:00</div>
-                            <div class="timer-status" id="timer-3-status">Ready</div>
-                        </div>
-                        
-                        <div class="timer-controls">
-                            <button class="timer-btn" id="timer-3-btn" data-timer="3">
-                                <span class="btn-icon">▶️</span>
-                                <span class="btn-text">Start</span>
-                            </button>
-                        </div>
-                        
-                        <div class="timer-shortcut">Alt+3</div>
-                    </div>
-                </div>
+            <div class="timer-controls">
+                <button class="config-timer-btn" id="config-timer-2" title="Configure Timer 2"></button>
+                <button class="start-btn" id="timer-2-btn">
+                    <span class="btn-icon"></span>
+                    <span class="btn-text">Start</span>
+                </button>
             </div>
-
-            <!-- Timeslip Panel -->
-            <div id="timeslip-panel" class="slide-panel">
-                <div class="panel-header">
-                    <h3>Create Timeslip</h3>
-                    <button id="close-timeslip-panel" class="close-btn">&times;</button>
-                </div>
-                <div class="panel-content">
-                    <div class="timeslip-summary">
-                        <div class="summary-row">
-                            <span class="label">Project:</span>
-                            <span id="timeslip-project" class="value">-</span>
-                        </div>
-                        <div class="summary-row">
-                            <span class="label">Actual Time:</span>
-                            <span id="timeslip-actual-time" class="value time-actual">-</span>
-                        </div>
-                        <div class="summary-row">
-                            <span class="label">Rounded Time:</span>
-                            <span id="timeslip-rounded-time" class="value time-rounded">-</span>
-                        </div>
-                    </div>
-                    
-                    <form id="timeslip-form" class="timeslip-form">
-                        <div class="form-group">
-                            <label for="work-date">Work Date</label>
-                            <input type="date" id="work-date" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="time-rounding">Time Rounding</label>
-                            <select id="time-rounding">
-                                <option value="0">No rounding</option>
-                                <option value="15">15 minutes</option>
-                                <option value="30" selected>30 minutes</option>
-                                <option value="60">1 hour</option>
-                            </select>
-                            <small class="form-hint">Professional time tracking typically uses 30-minute intervals</small>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="task-select">Task</label>
-                            <select id="task-select">
-                                <option value="">Loading tasks...</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="timeslip-comment">Description</label>
-                            <textarea id="timeslip-comment" placeholder="Describe what you worked on..." rows="3"></textarea>
-                            <small class="form-hint">Detailed descriptions help with invoicing and project tracking</small>
-                        </div>
-                        
-                        <div id="timeslip-error" class="error hidden"></div>
-                        
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">Create Timeslip</button>
-                            <button type="button" id="save-draft" class="btn btn-outline">Save Draft</button>
-                            <button type="button" id="cancel-timeslip" class="btn btn-secondary">Cancel</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Settings Panel -->
-            <div id="settings-panel" class="slide-panel">
-                <div class="panel-header">
-                    <h3>Settings</h3>
-                    <button id="close-settings-panel" class="close-btn">&times;</button>
-                </div>
-                <div class="panel-content">
-                    <form id="settings-form" class="settings-form">
-                        <div class="form-section">
-                            <h4>Time Tracking</h4>
-                            
-                            <div class="form-group">
-                                <label for="default-rounding">Default Time Rounding</label>
-                                <select id="default-rounding">
-                                    <option value="0">No rounding</option>
-                                    <option value="15">15 minutes</option>
-                                    <option value="30" selected>30 minutes</option>
-                                    <option value="60">1 hour</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="rounding-method">Rounding Method</label>
-                                <select id="rounding-method">
-                                    <option value="round">Round to nearest</option>
-                                    <option value="up">Always round up</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="form-section">
-                            <h4>Notifications</h4>
-                            
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="notify-timer-start" checked>
-                                    <span class="checkbox-text">Notify when timer starts</span>
-                                </label>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="notify-timer-stop" checked>
-                                    <span class="checkbox-text">Notify when timer stops</span>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="form-section">
-                            <h4>Auto-save</h4>
-                            
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="auto-save-drafts" checked>
-                                    <span class="checkbox-text">Auto-save drafts when timer stops</span>
-                                </label>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="max-drafts">Maximum drafts to keep</label>
-                                <input type="number" id="max-drafts" value="10" min="1" max="50">
-                            </div>
-                        </div>
-                        
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">Save Settings</button>
-                            <button type="button" id="reset-settings" class="btn btn-outline">Reset to Defaults</button>
-                            <button type="button" id="cancel-settings" class="btn btn-secondary">Cancel</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </main>
-
-        <!-- Footer -->
-        <footer class="footer">
-            <div class="footer-content">
-                <div class="total-time">
-                    <span class="label">Today:</span>
-                    <span id="total-time" class="time-total">0h 0m</span>
-                </div>
-                <div class="connection-status">
-                    <div id="sync-status" class="sync-status">
-                        <span class="status-icon">⚪</span>
-                        <span class="status-text">Not connected</span>
-                    </div>
-                    <button id="setup-btn" class="btn btn-sm btn-outline">Setup FreeAgent</button>
-                </div>
-            </div>
-        </footer>
-
-        <!-- Drafts Section (collapsible) -->
-        <div id="drafts-section" class="drafts-section hidden">
-            <div class="drafts-header">
-                <h4>📝 Saved Drafts</h4>
-                <button id="toggle-drafts" class="btn btn-sm">Show</button>
-            </div>
-            <div id="drafts-list" class="drafts-list"></div>
         </div>
-    </div>
+        
+        <div class="timer-tile client-3" data-timer="3">
+            <div class="shortcut-hint">Alt+3</div>
+            <div class="timer-info">
+                <div class="client-name" id="timer-3-name">Client 3</div>
+                <div class="timer-display" id="timer-3-display">00:00:00</div>
+                <div class="timer-status" id="timer-3-status">Ready</div>
+            </div>
+            <div class="timer-controls">
+                <button class="config-timer-btn" id="config-timer-3" title="Configure Timer 3"></button>
+                <button class="start-btn" id="timer-3-btn">
+                    <span class="btn-icon"></span>
+                    <span class="btn-text">Start</span>
+                </button>
+            </div>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="total-time">
+            Today: <span id="total-time">0h 0m</span>
+        </div>
+        <div class="sync-status" id="sync-status">
+            <span class="status-icon connecting"></span>
+            <span class="status-text">Connecting...</span>
+        </div>
+        <button id="settings-btn" class="setup-button">⚙️ Settings</button>
+    </footer>
 
-    <!-- Scripts - Load in correct dependency order -->
-    <script src="js/storage-adapter-simple.js"></script>
+    <!-- Scripts -->
+    <script src="js/storage-adapter.js"></script>
     <script src="js/freeagent-api.js"></script>
     <script src="js/time-tracker-clean.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/app-fixed.js"></script>
 </body>
 </html>

@@ -2,171 +2,263 @@
 const express = require('express');
 const { BrowserWindow } = require('electron');
 const path = require('path');
+const crypto = require('crypto');
+const FREEAGENT_CONFIG = require('./freeagent-config');
 
-class OAuthServer {
-    constructor(mainWindow) {
-        this.mainWindow = mainWindow;
+class FreeAgentOAuthServer {
+    constructor() {
         this.server = null;
-        this.authWindow = null;
-        this.port = 8080;
         this.app = express();
+        this.port = 8080;
+        this.authWindow = null;
+        this.pendingAuth = null;
+        
         this.setupRoutes();
     }
 
     setupRoutes() {
-        // OAuth callback route
-        this.app.get('/oauth/callback', (req, res) => {
-            const code = req.query.code;
-            const error = req.query.error;
-
-            if (error) {
-                res.send(`
-                    <html>
-                        <head><title>FreeAgent Authentication</title></head>
-                        <body>
-                            <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
-                                <h2 style="color: #dc3545;">Authentication Failed</h2>
+        // OAuth callback handler
+        this.app.get('/oauth/callback', async (req, res) => {
+            try {
+                const { code, error } = req.query;
+                
+                if (error) {
+                    console.error('OAuth error:', error);
+                    res.send(`
+                        <html>
+                            <body style="font-family: Arial; text-align: center; padding: 50px;">
+                                <h2 style="color: #f44336;">❌ Authorization Failed</h2>
                                 <p>Error: ${error}</p>
-                                <p><a href="#" onclick="window.close()">Close this window</a></p>
-                            </div>
-                        </body>
-                    </html>
-                `);
+                                <p>You can close this window.</p>
+                                <script>setTimeout(() => window.close(), 3000);</script>
+                            </body>
+                        </html>
+                    `);
+                    
+                    if (this.pendingAuth) {
+                        this.pendingAuth.reject(new Error('Authorization failed: ' + error));
+                        this.pendingAuth = null;
+                    }
+                    return;
+                }
+
+                if (!code) {
+                    throw new Error('No authorization code received');
+                }
+
+                console.log('✅ Received OAuth code, exchanging for tokens...');
+
+                // Exchange code for access token
+                const tokenData = await this.exchangeCodeForToken(code);
                 
-                // Send error to main window
-                this.mainWindow.webContents.send('oauth-error', error);
-            } else if (code) {
                 res.send(`
                     <html>
-                        <head><title>FreeAgent Authentication</title></head>
-                        <body>
-                            <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
-                                <h2 style="color: #28a745;">Authentication Successful!</h2>
-                                <p>You can now close this window and return to FreeAgent Time Tracker.</p>
-                                <script>
-                                    setTimeout(() => window.close(), 2000);
-                                </script>
-                            </div>
+                        <body style="font-family: Arial; text-align: center; padding: 50px;">
+                            <h2 style="color: #4CAF50;">✅ Authorization Successful!</h2>
+                            <p>You have successfully connected to FreeAgent.</p>
+                            <p>You can now close this window and return to the Time Tracker.</p>
+                            <script>setTimeout(() => window.close(), 2000);</script>
                         </body>
                     </html>
                 `);
+
+                console.log('✅ FreeAgent OAuth completed successfully');
+
+                // Resolve the pending authentication promise
+                if (this.pendingAuth) {
+                    this.pendingAuth.resolve(tokenData);
+                    this.pendingAuth = null;
+                }
+
+                // Close auth window
+                if (this.authWindow && !this.authWindow.isDestroyed()) {
+                    this.authWindow.close();
+                }
+
+            } catch (error) {
+                console.error('OAuth callback error:', error);
                 
-                // Send code to main window
-                this.mainWindow.webContents.send('oauth-code', code);
-            }
+                res.send(`
+                    <html>
+                        <body style="font-family: Arial; text-align: center; padding: 50px;">
+                            <h2 style="color: #f44336;">❌ Connection Failed</h2>
+                            <p>Error: ${error.message}</p>
+                            <p>You can close this window.</p>
+                            <script>setTimeout(() => window.close(), 3000);</script>
+                        </body>
+                    </html>
+                `);
 
-            // Close auth window
-            if (this.authWindow && !this.authWindow.isDestroyed()) {
-                this.authWindow.close();
+                if (this.pendingAuth) {
+                    this.pendingAuth.reject(error);
+                    this.pendingAuth = null;
+                }
             }
-
-            // Stop server after handling callback
-            setTimeout(() => this.stop(), 3000);
         });
 
-        // Health check route
+        // Health check endpoint
         this.app.get('/health', (req, res) => {
-            res.json({ status: 'ok', timestamp: new Date().toISOString() });
+            res.json({ status: 'OAuth server running', timestamp: new Date().toISOString() });
         });
-
-        // Serve static files for any additional auth pages
-        this.app.use(express.static(path.join(__dirname, '../renderer/oauth')));
     }
 
-    start() {
+    async start() {
         return new Promise((resolve, reject) => {
-            this.server = this.app.listen(this.port, (err) => {
-                if (err) {
-                    console.error('OAuth server start error:', err);
-                    reject(err);
+            this.server = this.app.listen(this.port, 'localhost', () => {
+                console.log(`✅ FreeAgent OAuth server running on http://localhost:${this.port}`);
+                resolve();
+            });
+
+            this.server.on('error', (error) => {
+                if (error.code === 'EADDRINUSE') {
+                    console.log(`Port ${this.port} in use, trying ${this.port + 1}...`);
+                    this.port++;
+                    this.server.listen(this.port, 'localhost', resolve);
                 } else {
-                    console.log(`OAuth server running on port ${this.port}`);
-                    resolve();
+                    reject(error);
                 }
             });
         });
     }
 
     stop() {
-        return new Promise((resolve) => {
-            if (this.server) {
-                this.server.close(() => {
-                    console.log('OAuth server stopped');
-                    resolve();
-                });
-            } else {
-                resolve();
-            }
-        });
+        if (this.server) {
+            this.server.close();
+            this.server = null;
+            console.log('OAuth server stopped');
+        }
     }
 
-    async authenticate(clientId, authUrl) {
+    async authenticate() {
         try {
-            // Start OAuth server
-            await this.start();
+            // Generate state parameter for security
+            const state = crypto.randomBytes(32).toString('hex');
+            
+            // Build authorization URL
+            const authUrl = new URL(FREEAGENT_CONFIG.authUrl);
+            authUrl.searchParams.append('client_id', FREEAGENT_CONFIG.clientId);
+            authUrl.searchParams.append('response_type', 'code');
+            authUrl.searchParams.append('redirect_uri', FREEAGENT_CONFIG.redirectUri);
+            authUrl.searchParams.append('state', state);
 
-            // Create auth window
+            console.log('🔐 Opening FreeAgent authorization window...');
+
+            // Create and show auth window
             this.authWindow = new BrowserWindow({
                 width: 500,
                 height: 700,
+                show: true,
                 modal: true,
-                parent: this.mainWindow,
                 webPreferences: {
                     nodeIntegration: false,
                     contextIsolation: true
-                },
-                title: 'FreeAgent Authentication'
+                }
             });
 
-            // Load FreeAgent OAuth URL
-            this.authWindow.loadURL(authUrl);
+            // Load the authorization URL
+            await this.authWindow.loadURL(authUrl.toString());
 
-            // Handle window closed before completion
-            this.authWindow.on('closed', () => {
-                console.log('Auth window closed');
-                this.authWindow = null;
-                this.stop();
-            });
-
-            // Return promise that resolves when we get the auth code
+            // Return promise that resolves when OAuth completes
             return new Promise((resolve, reject) => {
-                const timeout = setTimeout(() => {
-                    reject(new Error('Authentication timeout'));
+                this.pendingAuth = { resolve, reject };
+
+                // Handle window closed before completion
+                this.authWindow.on('closed', () => {
+                    if (this.pendingAuth) {
+                        this.pendingAuth.reject(new Error('Authorization window was closed'));
+                        this.pendingAuth = null;
+                    }
+                });
+
+                // Timeout after 5 minutes
+                setTimeout(() => {
+                    if (this.pendingAuth) {
+                        this.pendingAuth.reject(new Error('Authorization timeout'));
+                        this.pendingAuth = null;
+                    }
                     if (this.authWindow && !this.authWindow.isDestroyed()) {
                         this.authWindow.close();
                     }
-                    this.stop();
-                }, 300000); // 5 minute timeout
-
-                // Listen for OAuth responses
-                const handleCode = (event, code) => {
-                    clearTimeout(timeout);
-                    this.mainWindow.removeListener('oauth-code', handleCode);
-                    this.mainWindow.removeListener('oauth-error', handleError);
-                    resolve(code);
-                };
-
-                const handleError = (event, error) => {
-                    clearTimeout(timeout);
-                    this.mainWindow.removeListener('oauth-code', handleCode);
-                    this.mainWindow.removeListener('oauth-error', handleError);
-                    reject(new Error(`OAuth error: ${error}`));
-                };
-
-                this.mainWindow.on('oauth-code', handleCode);
-                this.mainWindow.on('oauth-error', handleError);
+                }, 300000);
             });
 
         } catch (error) {
-            console.error('OAuth authentication error:', error);
-            this.stop();
+            console.error('Authentication error:', error);
             throw error;
         }
     }
 
-    getRedirectUri() {
-        return `http://localhost:${this.port}/oauth/callback`;
+    async exchangeCodeForToken(code) {
+        try {
+            const response = await fetch(FREEAGENT_CONFIG.tokenUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    client_id: FREEAGENT_CONFIG.clientId,
+                    client_secret: FREEAGENT_CONFIG.clientSecret,
+                    grant_type: 'authorization_code',
+                    code: code,
+                    redirect_uri: FREEAGENT_CONFIG.redirectUri
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Token exchange failed: ${response.status} - ${errorText}`);
+            }
+
+            const tokenData = await response.json();
+            console.log('✅ Token exchange successful');
+
+            return {
+                access_token: tokenData.access_token,
+                refresh_token: tokenData.refresh_token,
+                expires_in: tokenData.expires_in,
+                token_type: tokenData.token_type
+            };
+
+        } catch (error) {
+            console.error('Token exchange error:', error);
+            throw new Error('Failed to exchange authorization code for access token: ' + error.message);
+        }
+    }
+
+    async refreshAccessToken(refreshToken) {
+        try {
+            const response = await fetch(FREEAGENT_CONFIG.tokenUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    client_id: FREEAGENT_CONFIG.clientId,
+                    client_secret: FREEAGENT_CONFIG.clientSecret,
+                    grant_type: 'refresh_token',
+                    refresh_token: refreshToken
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Token refresh failed: ${response.status}`);
+            }
+
+            const tokenData = await response.json();
+            console.log('✅ Token refresh successful');
+
+            return {
+                access_token: tokenData.access_token,
+                refresh_token: tokenData.refresh_token || refreshToken,
+                expires_in: tokenData.expires_in,
+                token_type: tokenData.token_type
+            };
+
+        } catch (error) {
+            console.error('Token refresh error:', error);
+            throw error;
+        }
     }
 }
 
-module.exports = OAuthServer;
+module.exports = FreeAgentOAuthServer;

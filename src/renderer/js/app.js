@@ -33,6 +33,20 @@ class App {
                 throw new Error('Storage adapter not available');
             }
 
+            // Check if electronAPI is available and working
+            if (window.electronAPI) {
+                console.log('✅ Electron APIs detected');
+                try {
+                    const version = await window.electronAPI.getVersion();
+                    console.log('✅ IPC communication working, app version:', version);
+                } catch (error) {
+                    console.warn('⚠️ IPC communication issue:', error.message);
+                    // Continue anyway - the app might still work
+                }
+            } else {
+                console.log('ℹ️ Running in browser mode (no Electron APIs)');
+            }
+
             // Check if this is first run
             const isFirstRun = !(await window.storageAdapter.has('timeTrackingData'));
             
@@ -52,6 +66,9 @@ class App {
 
             // Initialize time tracker
             this.timeTracker = new TimeTracker();
+            
+            // Make app globally available for API callbacks
+            window.app = this;
 
             // Setup global error handling
             this.setupErrorHandling();
