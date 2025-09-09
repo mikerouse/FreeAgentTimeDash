@@ -828,27 +828,24 @@ class TimeTracker {
             const hours = draft.elapsed / 3600000;
             const roundedHours = this.freeagentAPI.roundTime(hours, parseInt(draft.timeRounding), this.settings.roundingMethod);
             
-            draftElement.innerHTML = `
-                <div class="draft-header">
-                    <span class="draft-title">${draft.timerName}</span>
-                    <span class="draft-time">${Math.floor(hours)}h ${Math.floor((hours - Math.floor(hours)) * 60)}m</span>
-                </div>
-                <div class="draft-details">
-                    ${draft.project ? 'Project assigned' : 'No project'} • 
-                    Rounded: ${Math.floor(roundedHours)}h ${Math.floor((roundedHours - Math.floor(roundedHours)) * 60)}m •
-                    ${new Date(draft.createdAt).toLocaleDateString()}
-                </div>
-                <div class="draft-actions">
-                    <button class="draft-btn submit" onclick="window.app.getTimeTracker().submitDraft(${draft.id})">
-                        Submit
-                    </button>
-                    <button class="draft-btn delete" onclick="window.app.getTimeTracker().deleteDraft(${draft.id})">
-                        Delete
-                    </button>
-                </div>
-            `;
-            
-            draftsList.appendChild(draftElement);
+        draftElement.innerHTML = 
+            '<div class="draft-header">' +
+                '<span class="draft-title">' + draft.timerName + '</span>' +
+                '<span class="draft-time">' + Math.floor(hours) + 'h ' + Math.floor((hours - Math.floor(hours)) * 60) + 'm</span>' +
+            '</div>' +
+            '<div class="draft-details">' +
+                (draft.project ? 'Project assigned' : 'No project') + ' • ' +
+                'Rounded: ' + Math.floor(roundedHours) + 'h ' + Math.floor((roundedHours - Math.floor(roundedHours)) * 60) + 'm • ' +
+                new Date(draft.createdAt).toLocaleDateString() +
+            '</div>' +
+            '<div class="draft-actions">' +
+                '<button class="draft-btn submit" onclick="window.app.getTimeTracker().submitDraft(' + draft.id + ')">' +
+                    'Submit' +
+                '</button>' +
+                '<button class="draft-btn delete" onclick="window.app.getTimeTracker().deleteDraft(' + draft.id + ')">' +
+                    'Delete' +
+                '</button>' +
+            '</div>';            draftsList.appendChild(draftElement);
         });
     }
 
@@ -930,7 +927,7 @@ class TimeTracker {
             // Save file if in Electron
             if (this.isElectron) {
                 const result = await window.electronAPI.showSaveDialog({
-                    defaultPath: `timeslips-${endDate.toISOString().split('T')[0]}.csv`,
+                    defaultPath: 'timeslips-' + endDate.toISOString().split('T')[0] + '.csv',
                     filters: [
                         { name: 'CSV Files', extensions: ['csv'] }
                     ]
@@ -941,7 +938,7 @@ class TimeTracker {
                     console.log('Would save to:', result.filePath);
                     window.electronAPI.showNotification(
                         'Export Complete',
-                        `Exported ${timeslips.length} timeslips`
+                        'Exported ' + timeslips.length + ' timeslips'
                     );
                 }
             }
@@ -966,7 +963,7 @@ class TimeTracker {
         if (actualElement) {
             const hours = Math.floor(actualHours);
             const minutes = Math.floor((actualHours - hours) * 60);
-            actualElement.textContent = `${hours}h ${minutes}m`;
+            actualElement.textContent = hours + 'h ' + minutes + 'm';
         }
 
         if (roundedElement && roundingSelect) {
@@ -974,7 +971,7 @@ class TimeTracker {
             const roundedHours = this.freeagentAPI.roundTime(actualHours, roundingMinutes, this.settings.roundingMethod);
             const hours = Math.floor(roundedHours);
             const minutes = Math.floor((roundedHours - hours) * 60);
-            roundedElement.textContent = `${hours}h ${minutes}m`;
+            roundedElement.textContent = hours + 'h ' + minutes + 'm';
         }
     }
 

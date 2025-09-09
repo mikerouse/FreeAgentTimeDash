@@ -15,7 +15,7 @@ class App {
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', () => this.start());
             } else {
-                this.start();
+                await this.start();
             }
         } catch (error) {
             console.error('App initialization failed:', error);
@@ -39,6 +39,15 @@ class App {
             if (isFirstRun) {
                 console.log('First run detected, showing welcome');
                 await this.showWelcome();
+            }
+
+            // Check that required classes are available
+            if (typeof TimeTracker === 'undefined') {
+                throw new Error('TimeTracker class not loaded. Check script loading order.');
+            }
+
+            if (typeof FreeAgentAPI === 'undefined') {
+                throw new Error('FreeAgentAPI class not loaded. Check script loading order.');
             }
 
             // Initialize time tracker
